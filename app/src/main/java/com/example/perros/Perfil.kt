@@ -32,7 +32,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -47,7 +46,6 @@ fun ProfileScreen(navController: NavController) {
 
     // Obtener datos del usuario
     val sharedPref = remember { context.getSharedPreferences("user_session", Context.MODE_PRIVATE) }
-    val userId by remember { mutableStateOf(sharedPref.getInt("user_id", 0)) }
     val userName by remember { mutableStateOf(sharedPref.getString("user_name", "Nombre")) }
     val userSurname by remember { mutableStateOf(sharedPref.getString("user_surname", "Apellido")) }
     val userEmail by remember { mutableStateOf(sharedPref.getString("user_email", "email@ejemplo.com")) }
@@ -89,8 +87,6 @@ fun ProfileScreen(navController: NavController) {
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold
         )
-        // Nombre del usuario
-        // Nombre del usuario
         userToken?.let {
             Text(
                 text = it,
