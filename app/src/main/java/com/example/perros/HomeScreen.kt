@@ -61,7 +61,7 @@ fun HomeScreen(navController: NavController) {
             contentAlignment = Alignment.Center
         ) {
             when (selectedTab) {
-                0 -> MapScreen()
+                0 -> MapScreen(navController)
                 1 -> Mascotas(navController)
                 2 -> Text("Proximamente")
                 3 -> ProfileScreen(navController)

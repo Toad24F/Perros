@@ -29,6 +29,7 @@ maps-compose = "4.3.3"
 securityCrypto = "1.1.0-alpha07"
 transportRuntime = "4.0.0"
 firebaseCrashlyticsBuildtools = "3.0.3"
+navigationCommonAndroid = "2.9.0"
 
 [libraries]
 androidx-animation = { module = "androidx.compose.animation:animation", version.ref = "animation" }
@@ -64,6 +65,7 @@ play-services-location = { group = "com.google.android.gms", name = "play-servic
 maps-compose = { group = "com.google.maps.android", name = "maps-compose", version.ref = "maps-compose" }
 transport-runtime = { group = "com.google.android.datatransport", name = "transport-runtime", version.ref = "transportRuntime" }
 firebase-crashlytics-buildtools = { group = "com.google.firebase", name = "firebase-crashlytics-buildtools", version.ref = "firebaseCrashlyticsBuildtools" }
+androidx-navigation-common-android = { group = "androidx.navigation", name = "navigation-common-android", version.ref = "navigationCommonAndroid" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

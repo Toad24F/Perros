@@ -45,16 +45,24 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import io.github.jan.supabase.postgrest.postgrest
-import io.github.jan.supabase.postgrest.query.Columns
+import io.ktor.client.HttpClient
+import io.ktor.client.call.body
+import io.ktor.client.engine.android.Android
+import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.client.request.post
+import io.ktor.client.request.setBody
+import io.ktor.client.statement.HttpResponse
+import io.ktor.http.ContentType
+import io.ktor.http.HttpStatusCode
+import io.ktor.http.contentType
+import io.ktor.serialization.kotlinx.json.json
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
-import java.util.Base64
 
-// --- Pantalla de Login ---
 @Composable
 fun LoginScreen(navController: NavController) {
+    // Estados del formulario
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(false) }
@@ -63,22 +71,103 @@ fun LoginScreen(navController: NavController) {
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
 
-    // Función simple para "encriptar" (debe coincidir con RegisterScreen)
-    fun simpleEncrypt(password: String): String {
-        return Base64.getEncoder().encodeToString(password.toByteArray())
-    }
 
 
-    // Función para validar email
+    @Serializable
+    data class UserData(
+        val id: String,
+        val nombre: String,
+        val apellido: String,
+        val email: String,
+        val password: String,
+        val created_at: String
+    )
+    // Modelos de datos para las respuestas
+    @Serializable
+    data class LoginResponse(
+        val message: String,
+        val data: List<UserData>,
+        val token: String
+    )
+    // Validaciones
     fun isValidEmail(email: String): Boolean {
-        val pattern = Patterns.EMAIL_ADDRESS
-        return pattern.matcher(email).matches()
+        return Patterns.EMAIL_ADDRESS.matcher(email).matches()
     }
 
-    // Función para validar contraseña
     fun isValidPassword(password: String): Boolean {
         return password.length >= 8
     }
+
+    // Función para autenticar con el servidor
+    suspend fun loginUser(email: String, password: String): Boolean {
+        return try {
+            val client = HttpClient(Android) {
+                install(ContentNegotiation) {
+                    json(Json {
+                        ignoreUnknownKeys = true
+                        isLenient = true
+                    })
+                }
+            }
+
+            val response: HttpResponse = client.post("http://192.168.100.25:5000/api/v1/auth/login") {
+                contentType(ContentType.Application.Json)
+                setBody(mapOf(
+                    "email" to email,
+                    "password" to password
+                ))
+            }
+
+            when (response.status) {
+                HttpStatusCode.OK -> {
+                    val loginResponse = response.body<LoginResponse>()
+
+                    if (loginResponse.data.isNotEmpty()) {
+                        val user = loginResponse.data[0]
+
+                        // Guardar datos de sesión
+                        val sharedPref = context.getSharedPreferences("user_session", Context.MODE_PRIVATE)
+                        with(sharedPref.edit()) {
+                            putString("user_id", user.id)
+                            putString("user_name", user.nombre)
+                            putString("user_surname", user.apellido)
+                            putString("user_email", user.email)
+                            putString("user_token", loginResponse.token)
+                            apply()
+                        }
+                        true
+                    } else {
+                        errorMessage = "No se recibieron datos del usuario"
+                        false
+                    }
+                }
+                HttpStatusCode.Unauthorized -> {
+                    errorMessage = "Credenciales incorrectas"
+                    false
+                }
+                else -> {
+                    errorMessage = try {
+                        val errorResponse = response.body<Map<String, String>>()
+                        errorResponse["message"] ?: "Error desconocido del servidor"
+                    } catch (e: Exception) {
+                        "Error al procesar la respuesta"
+                    }
+                    false
+                }
+            }
+        } catch (e: Exception) {
+            errorMessage = when {
+                e.message?.contains("Unable to resolve host") == true ->
+                    "Error de conexión: Servidor no disponible"
+                e.message?.contains("timed out") == true ->
+                    "Error: Tiempo de espera agotado"
+                else -> "Error: ${e.message ?: "Error desconocido"}"
+            }
+            false
+        }
+    }
+
+    // Interfaz de usuario
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -86,14 +175,14 @@ fun LoginScreen(navController: NavController) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        // --- Logo y Título ---
+        // Logo y título
         Column(
             modifier = Modifier.padding(vertical = 0.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Image(
                 painter = painterResource(id = R.drawable.dog_logo),
-                contentDescription = "Logo Petsense",
+                contentDescription = "Logo de la app",
                 modifier = Modifier.size(120.dp)
             )
             Spacer(modifier = Modifier.height(8.dp))
@@ -106,11 +195,13 @@ fun LoginScreen(navController: NavController) {
                 Text(
                     text = "Huellas Seguras",
                     color = MaterialTheme.colorScheme.background,
-                    style = MaterialTheme.typography.headlineLarge.copy(fontWeight = FontWeight.Bold)
+                    style = MaterialTheme.typography.headlineLarge.copy(
+                        fontWeight = FontWeight.Bold
+                    )
                 )
             }
 
-            // Mostrar mensaje de error si existe
+            // Mensaje de error
             if (errorMessage.isNotEmpty()) {
                 Text(
                     text = errorMessage,
@@ -122,7 +213,7 @@ fun LoginScreen(navController: NavController) {
 
         Spacer(modifier = Modifier.height(32.dp))
 
-        // Campo de Email con validación visual
+        // Campos del formulario
         OutlinedTextField(
             value = email,
             onValueChange = { email = it },
@@ -143,7 +234,6 @@ fun LoginScreen(navController: NavController) {
                 .padding(bottom = 16.dp)
         )
 
-        // Campo de Contraseña con validación visual
         OutlinedTextField(
             value = password,
             onValueChange = { password = it },
@@ -167,63 +257,48 @@ fun LoginScreen(navController: NavController) {
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // Enlace "Olvidé mi contraseña"
+        // Enlace para recuperar contraseña
         TextButton(
             onClick = { /* TODO: Implementar recuperación */ },
             colors = ButtonDefaults.textButtonColors(
-                contentColor = Color(0xFF58A5D7)
-            )
+                contentColor = Color(0xFF58A5D7))
         ) {
             Text("¿Olvidaste tu contraseña?")
         }
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // Botón de Iniciar Sesión
+        // Botón de inicio de sesión
         Button(
             onClick = {
-                if (email.isEmpty() || password.isEmpty()) {
-                    errorMessage = "Por favor completa todos los campos"
-                    return@Button
+                // Validaciones
+                when {
+                    email.isEmpty() || password.isEmpty() -> {
+                        errorMessage = "Por favor complete todos los campos"
+                        return@Button
+                    }
+                    !isValidEmail(email) -> {
+                        errorMessage = "Ingrese un email válido"
+                        return@Button
+                    }
+                    !isValidPassword(password) -> {
+                        errorMessage = "La contraseña debe tener al menos 8 caracteres"
+                        return@Button
+                    }
                 }
 
                 isLoading = true
                 errorMessage = ""
 
                 scope.launch {
-                    try {
-                        // 1. Encriptar la contraseña (igual que en registro)
-                        val encryptedPassword = simpleEncrypt(password)
-                        val userData = supabase.postgrest["users"]
-                            .select(columns = Columns.list("id","nombre", "apellido", "email")) {
-                                eq("email", email)
-                                eq("contraseña", encryptedPassword)
-                            }
-                            .decodeSingleOrNull<User>()
-                        if (userData == null) {
-                            errorMessage = "Email o contraseña incorrectos"
-                            return@launch
-                        }
+                    val success = loginUser(email, password)
 
-                        // Guardar datos en sesión local
-                        val sharedPref = context.getSharedPreferences("user_session", Context.MODE_PRIVATE)
-                        with(sharedPref.edit()) {
-                            putInt("user_id", userData.id)
-                            putString("user_name", userData.nombre)
-                            putString("user_surname", userData.apellido)
-                            putString("user_email", userData.email)
-                            apply()
-                        }
-
-                        // 4. Navegar a home
+                    if (success) {
                         navController.navigate("home") {
                             popUpTo(0)
                         }
-                    } catch (e: Exception) {
-                        errorMessage = "Error al iniciar sesión: ${e.message}"
-                    } finally {
-                        isLoading = false
                     }
+                    isLoading = false
                 }
             },
             modifier = Modifier.fillMaxWidth(),
@@ -243,7 +318,7 @@ fun LoginScreen(navController: NavController) {
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Texto "¿No tienes cuenta?"
+        // Enlace a registro
         Row {
             Text("¿No tienes cuenta? ")
             Text(
@@ -254,10 +329,3 @@ fun LoginScreen(navController: NavController) {
         }
     }
 }
-@Serializable
-data class User(
-    val id: Int,
-    val nombre: String,
-    val apellido: String,
-    val email: String,
-)

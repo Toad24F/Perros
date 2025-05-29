@@ -42,7 +42,8 @@ android {
 }
 
 dependencies {
-    implementation (libs.material3)
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation(libs.material3)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
@@ -56,6 +57,7 @@ dependencies {
     implementation(libs.androidx.constraintlayout)
     implementation(libs.transport.runtime)
     implementation(libs.firebase.crashlytics.buildtools)
+    implementation(libs.androidx.navigation.common.android)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -68,7 +70,7 @@ dependencies {
     implementation(libs.play.services.location)
     implementation(libs.maps.compose)
     implementation("com.google.accompanist:accompanist-permissions:0.34.0")
-    implementation (libs.postgrest.kt)
+    implementation(libs.postgrest.kt)
     implementation(libs.gotrue.kt)
     implementation(libs.androidx.security.crypto) // Para encriptar SharedPreferences
     // Motor HTTP para Ktor (elige uno):
@@ -80,4 +82,6 @@ dependencies {
     // Si usas inyección de dependencias (opcional)
     implementation(libs.koin.android)
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
+
+
 }

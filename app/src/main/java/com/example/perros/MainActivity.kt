@@ -25,18 +25,10 @@ import androidx.navigation.NavController
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
-import io.github.jan.supabase.createSupabaseClient
-import io.github.jan.supabase.gotrue.GoTrue
-import io.github.jan.supabase.postgrest.Postgrest
+import androidx.navigation.navArgument
 import kotlinx.coroutines.launch
+import androidx.navigation.NavType
 
-val supabase = createSupabaseClient(
-    supabaseUrl = "https://uzyamneejdkqmzimztgu.supabase.co",
-    supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV6eWFtbmVlamRrcW16aW16dGd1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU2NDcyNTksImV4cCI6MjA2MTIyMzI1OX0.sF-vUMJseIVoTuGyZk5AemKOxdGQ9h6uL0wrJzuyLuE"
-) {
-    install(Postgrest)
-    install(GoTrue)
-}
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -137,9 +129,21 @@ public fun AppNavigation() {
                 slideOutHorizontally(animationSpec = tween(300)) { width -> -width } + fadeOut(animationSpec = tween(300))
             }
         ) { RegisterScreen(navController) }
-        composable("petDetail/{petId}") { backStackEntry ->
-            val petId = backStackEntry.arguments?.getString("petId")?.toIntOrNull()
-            PetProfileScreen(petId, navController)
+        composable(
+            route = "petDetail/{petId}",
+            arguments = listOf(
+                navArgument("petId") {
+                    type = NavType.StringType
+                }
+            )
+        ) { backStackEntry ->
+            val petId = backStackEntry.arguments?.getString("petId")
+            if (petId != null) {
+                PetProfileScreen(petId = petId, navController = navController)
+            } else {
+                // Manejo de error si petId es null
+                Text("Error: ID de mascota no válido")
+            }
         }
     }
 }

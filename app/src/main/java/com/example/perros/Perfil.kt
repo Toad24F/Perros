@@ -51,6 +51,8 @@ fun ProfileScreen(navController: NavController) {
     val userName by remember { mutableStateOf(sharedPref.getString("user_name", "Nombre")) }
     val userSurname by remember { mutableStateOf(sharedPref.getString("user_surname", "Apellido")) }
     val userEmail by remember { mutableStateOf(sharedPref.getString("user_email", "email@ejemplo.com")) }
+    val userToken by remember { mutableStateOf(sharedPref.getString("token", "")) }
+
     val usuario = "$userName $userSurname"
 
     // Estado para controlar el diálogo de confirmación
@@ -88,6 +90,14 @@ fun ProfileScreen(navController: NavController) {
             fontWeight = FontWeight.Bold
         )
         // Nombre del usuario
+        // Nombre del usuario
+        userToken?.let {
+            Text(
+                text = it,
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold
+            )
+        }
 
         // Email del usuario
         Text(
