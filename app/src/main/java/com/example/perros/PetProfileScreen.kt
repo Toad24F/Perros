@@ -111,7 +111,7 @@ fun PetProfileScreen(petId: String?, navController: NavController1) {
                     }
                 }
 
-                val response = client.get("http://192.168.100.25:5000/api/v1/mascotas/$petId") {
+                val response = client.get("http://192.168.137.1:5000/api/v1/mascotas/$petId") {
                     contentType(ContentType.Application.Json)
                 }
 

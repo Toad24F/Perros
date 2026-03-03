@@ -104,7 +104,7 @@ fun MapScreen() {
                     }
                 }
 
-                val response = client.get("http://192.168.100.25:5000/api/v1/mascotas?user_id=$userId")
+                val response = client.get("http://192.168.137.1:5000/api/v1/mascotas?user_id=$userId")
                 val petsResponse = response.body<PetsLocationResponse>()
                 pets = petsResponse.data.map { pet ->
                     PetLocation(

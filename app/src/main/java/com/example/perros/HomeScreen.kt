@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 
 
+
 // --- Pantalla Principal (Home) ---
 @Composable
 fun HomeScreen(navController: NavController) {

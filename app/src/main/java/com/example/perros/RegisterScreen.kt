@@ -1,6 +1,5 @@
 package com.example.perros
 
-import android.content.Context
 import android.util.Patterns
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -21,7 +20,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -44,22 +42,11 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import io.ktor.client.HttpClient
-import io.ktor.client.call.body
-import io.ktor.client.engine.android.Android
-import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
-import io.ktor.client.request.post
-import io.ktor.client.request.setBody
-import io.ktor.client.statement.HttpResponse
-import io.ktor.http.ContentType
-import io.ktor.http.HttpStatusCode
-import io.ktor.http.contentType
-import io.ktor.serialization.kotlinx.json.json
+import io.github.jan.supabase.auth.auth
+import io.github.jan.supabase.auth.providers.builtin.Email
 import kotlinx.coroutines.launch
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 
 @Composable
 fun RegisterScreen(navController: NavController) {
@@ -76,21 +63,6 @@ fun RegisterScreen(navController: NavController) {
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
 
-    // Modelo para la respuesta del servidor
-
-    @Serializable
-    data class UserData(
-        val id: String,
-        val nombre: String,
-        val apellido: String,
-        val email: String
-    )
-    @Serializable
-    data class RegisterResponse(
-        val message: String,
-        val data: UserData,
-        val token: String
-    )
 
     // Función para validar email
     fun isValidEmail(email: String): Boolean {
@@ -104,58 +76,26 @@ fun RegisterScreen(navController: NavController) {
     }
 
     // Función para realizar el registro en el servidor Express
-    suspend fun registerUser(userData: Map<String, String>): Boolean {
+    suspend fun registerUser(emailInput: String, passwordInput: String, nombre: String, apellido: String): Boolean {
+        if (emailInput.isBlank() || passwordInput.isBlank()) {
+            errorMessage = "Email y contraseña no pueden estar vacíos"
+            return false
+        }
         return try {
-            val client = HttpClient(Android) {
-                install(ContentNegotiation) {
-                    json(Json {
-                        ignoreUnknownKeys = true
-                        isLenient = true
-                    })
+
+            Supabase.client.auth.signUpWith(Email) {
+                this.email = emailInput
+                this.password = passwordInput
+                data = buildJsonObject {
+                    put("Nombre", nombre)
+                    put("Apellido", apellido)
                 }
             }
 
-            val response: HttpResponse = client.post("http://192.168.100.25:5000/api/v1/auth/register") {
-                contentType(ContentType.Application.Json)
-                setBody(userData)
-            }
-
-            when (response.status) {
-                HttpStatusCode.OK -> {
-                    val registerResponse = response.body<RegisterResponse>()
-
-                    // Guardar datos en SharedPreferences
-                    val sharedPref = context.getSharedPreferences("user_session", Context.MODE_PRIVATE)
-                    with(sharedPref.edit()) {
-                        putString("user_id", registerResponse.data.id)
-                        putString("user_name", registerResponse.data.nombre)
-                        putString("user_surname", registerResponse.data.apellido)
-                        putString("user_email", registerResponse.data.email)
-                        putString("user_token", registerResponse.token) // Guardar el token
-                        apply()
-                    }
-                    true
-                }
-                else -> {
-                    // Intentar leer el mensaje de error del servidor como JSON
-                    val errorResponse = try {
-                        val json = Json.parseToJsonElement(response.body<String>())
-                        json.jsonObject["message"]?.jsonPrimitive?.content ?: "Error desconocido"
-                    } catch (e: Exception) {
-                        "Error desconocido"
-                    }
-                    errorMessage = "Error del servidor: $errorResponse"
-                    false
-                }
-            }
+            true
         } catch (e: Exception) {
-            errorMessage = when {
-                e.message?.contains("Unable to resolve host") == true ->
-                    "No se puede conectar al servidor. Verifique su conexión."
-                e.message?.contains("timed out") == true ->
-                    "Tiempo de espera agotado. El servidor no respondió."
-                else -> "Error de conexión: ${e.message ?: "Error desconocido"}"
-            }
+            e.printStackTrace()
+            errorMessage = "Error al registrar: ${e.message}"
             false
         }
     }
@@ -312,15 +252,7 @@ fun RegisterScreen(navController: NavController) {
                     errorMessage = ""
 
                     scope.launch {
-                        val userData = mapOf(
-                            "email" to email,
-                            "password" to password,
-                            "nombre" to nombre,
-                            "apellido" to apellido
-                        )
-
-                        val success = registerUser(userData)
-
+                        val success = registerUser(email, password, nombre, apellido)
                         if (success) {
                             // Navegar a la pantalla de inicio
                             navController.navigate("home") {

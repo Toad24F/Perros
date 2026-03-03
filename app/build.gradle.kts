@@ -1,22 +1,36 @@
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     id("org.jetbrains.kotlin.plugin.serialization")
+
+}
+// Cargar las variables de local.properties
+val localProperties = Properties()
+val localPropertiesFile = rootProject.file("local.properties")
+if (localPropertiesFile.exists()) {
+    localPropertiesFile.inputStream().use { localProperties.load(it) }
 }
 
 android {
     namespace = "com.example.perros"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.example.perros"
         minSdk = 32
-        targetSdk = 35
+        targetSdk = 36
         versionCode = 1
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        // CREAR LAS VARIABLES PARA EL BUILDCONFIG
+        buildConfigField("String", "SUPABASE_URL", "\"${localProperties.getProperty("SUPABASE_URL", "")}\"")
+        buildConfigField("String", "SUPABASE_KEY", "\"${localProperties.getProperty("SUPABASE_KEY", "")}\"")
+
     }
 
     buildTypes {
@@ -29,20 +43,24 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
-    kotlinOptions {
-        jvmTarget = "11"
+    kotlin {
+        compilerOptions {
+            jvmTarget.set(JvmTarget.JVM_17)
+        }
     }
     buildFeatures {
         compose = true
         viewBinding = true
+        buildConfig = true
     }
+
 }
 
 dependencies {
-    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation(libs.okhttp)
     implementation(libs.material3)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
@@ -69,19 +87,17 @@ dependencies {
     implementation(libs.androidx.animation) // Para animaciones
     implementation(libs.play.services.location)
     implementation(libs.maps.compose)
-    implementation("com.google.accompanist:accompanist-permissions:0.34.0")
-    implementation(libs.postgrest.kt)
-    implementation(libs.gotrue.kt)
+    implementation(libs.accompanist.permissions)
     implementation(libs.androidx.security.crypto) // Para encriptar SharedPreferences
-    // Motor HTTP para Ktor (elige uno):
-    implementation(libs.ktor.client.android) // Para Android
-    // O alternativamente:
-    implementation(libs.ktor.client.cio) // Motor basado en coroutines
-    // Coroutines
     implementation(libs.kotlinx.coroutines.android)
-    // Si usas inyección de dependencias (opcional)
     implementation(libs.koin.android)
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
+    implementation(libs.kotlinx.serialization.json)
+    // SDK principal de Supabase y módulo de Auth (GoTrue)
+    implementation("io.github.jan-tennert.supabase:postgrest-kt:3.4.1")
+    implementation("io.github.jan-tennert.supabase:auth-kt:3.4.1")
+    // Serialización necesaria para los datos
+    implementation("io.ktor:ktor-client-android:3.4.1")
+
 
 
 }

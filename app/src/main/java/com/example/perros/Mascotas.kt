@@ -50,6 +50,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import io.ktor.client.HttpClient
@@ -126,7 +127,7 @@ fun Mascotas(navController: NavController) {
                 }
 
                 // Usar parámetros de consulta en la URL
-                val response = client.get("http://192.168.100.25:5000/api/v1/mascotas?user_id=$userId") {
+                val response = client.get("http://192.168.137.1:5000/api/v1/mascotas?user_id=$userId") {
                     contentType(ContentType.Application.Json)
                 }
 
@@ -271,7 +272,7 @@ fun Mascotas(navController: NavController) {
                             }
                         }
 
-                        val response = client.post("http://192.168.100.25:5000/api/v1/mascotas/") {
+                        val response = client.post("http://192.168.137.1:5000/api/v1/mascotas/") {
                             contentType(ContentType.Application.Json)
                             setBody(newPet) // Enviamos el objeto NewPet directamente
                         }
@@ -529,6 +530,7 @@ fun AddPetForm(
         }
     )
 }
+
 
 @Serializable
 data class NewPet(

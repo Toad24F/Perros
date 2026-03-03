@@ -110,7 +110,7 @@ fun LoginScreen(navController: NavController) {
                 }
             }
 
-            val response: HttpResponse = client.post("http://192.168.100.25:5000/api/v1/auth/login") {
+            val response: HttpResponse = client.post("http://192.168.137.1:5000/api/v1/auth/login") {
                 contentType(ContentType.Application.Json)
                 setBody(mapOf(
                     "email" to email,
@@ -193,7 +193,7 @@ fun LoginScreen(navController: NavController) {
                     .padding(16.dp)
             ) {
                 Text(
-                    text = "Huellas Seguras",
+                    text = "Huellas Felices",
                     color = MaterialTheme.colorScheme.background,
                     style = MaterialTheme.typography.headlineLarge.copy(
                         fontWeight = FontWeight.Bold
