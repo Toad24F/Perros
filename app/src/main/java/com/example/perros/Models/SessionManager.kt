@@ -1,4 +1,4 @@
-package com.example.perros
+package com.example.perros.Models
 
 import android.content.Context
 

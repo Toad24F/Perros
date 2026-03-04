@@ -1,4 +1,4 @@
-package com.example.perros
+package com.example.perros.Screens
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -20,7 +20,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-
+import com.example.perros.R
 
 
 // --- Pantalla Principal (Home) ---

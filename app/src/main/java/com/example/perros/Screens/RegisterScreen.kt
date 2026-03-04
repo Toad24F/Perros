@@ -1,4 +1,4 @@
-package com.example.perros
+package com.example.perros.Screens
 
 import android.util.Patterns
 import androidx.compose.foundation.Image
@@ -20,6 +20,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -35,21 +36,20 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import io.github.jan.supabase.auth.auth
-import io.github.jan.supabase.auth.providers.builtin.Email
+import com.example.perros.R
 import kotlinx.coroutines.launch
-import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.put
+import com.example.perros.Models.RegisterFunction
 
 @Composable
-fun RegisterScreen(navController: NavController) {
+fun RegisterScreen(
+    navController: NavController,
+) {
     // Estados para los campos del formulario
     var nombre by remember { mutableStateOf("") }
     var apellido by remember { mutableStateOf("") }
@@ -58,11 +58,10 @@ fun RegisterScreen(navController: NavController) {
     var confirmPassword by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf("") }
+    val registerFunction = remember { RegisterFunction() }
 
     // CoroutineScope para manejar operaciones asíncronas
     val scope = rememberCoroutineScope()
-    val context = LocalContext.current
-
 
     // Función para validar email
     fun isValidEmail(email: String): Boolean {
@@ -74,32 +73,6 @@ fun RegisterScreen(navController: NavController) {
     fun isValidPassword(password: String): Boolean {
         return password.length >= 8
     }
-
-    // Función para realizar el registro en el servidor Express
-    suspend fun registerUser(emailInput: String, passwordInput: String, nombre: String, apellido: String): Boolean {
-        if (emailInput.isBlank() || passwordInput.isBlank()) {
-            errorMessage = "Email y contraseña no pueden estar vacíos"
-            return false
-        }
-        return try {
-
-            Supabase.client.auth.signUpWith(Email) {
-                this.email = emailInput
-                this.password = passwordInput
-                data = buildJsonObject {
-                    put("Nombre", nombre)
-                    put("Apellido", apellido)
-                }
-            }
-
-            true
-        } catch (e: Exception) {
-            e.printStackTrace()
-            errorMessage = "Error al registrar: ${e.message}"
-            false
-        }
-    }
-
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -247,21 +220,28 @@ fun RegisterScreen(navController: NavController) {
                             return@Button
                         }
                     }
-
                     isLoading = true
-                    errorMessage = ""
-
                     scope.launch {
-                        val success = registerUser(email, password, nombre, apellido)
-                        if (success) {
+                        val error = registerFunction.registerUser(email, password, nombre, apellido)
+                        if (error == null) {
                             // Navegar a la pantalla de inicio
                             navController.navigate("home") {
                                 popUpTo("register") { inclusive = true }
                             }
+                        }else{
+                            errorMessage = error
                         }
                         isLoading = false
                     }
                 },
+
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !isLoading,
+                shape = RoundedCornerShape(10.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFF58A5D7),
+                    contentColor = MaterialTheme.colorScheme.background,
+                )
                 // ... (Parámetros del botón permanecen igual)
             ) {
                 if (isLoading) {

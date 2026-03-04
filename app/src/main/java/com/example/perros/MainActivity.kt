@@ -28,6 +28,11 @@ import androidx.core.content.ContextCompat
 import androidx.navigation.navArgument
 import kotlinx.coroutines.launch
 import androidx.navigation.NavType
+import com.example.perros.Screens.HomeScreen
+import com.example.perros.Screens.LoginScreen
+import com.example.perros.Screens.PermissionHandler
+import com.example.perros.Screens.PetProfileScreen
+import com.example.perros.Screens.RegisterScreen
 
 
 class MainActivity : ComponentActivity() {

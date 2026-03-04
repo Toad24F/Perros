@@ -1,4 +1,4 @@
-package com.example.perros
+package com.example.perros.Screens
 
 import android.content.Context
 import androidx.compose.foundation.background
@@ -37,6 +37,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import com.example.perros.R
 import kotlinx.coroutines.launch
 
 @Composable

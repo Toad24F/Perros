@@ -1,7 +1,8 @@
-package com.example.perros
+package com.example.perros.Models
 
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import com.example.perros.R
 
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
