@@ -36,6 +36,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -59,6 +60,7 @@ fun RegisterScreen(
     var isLoading by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf("") }
     val registerFunction = remember { RegisterFunction() }
+    val context = LocalContext.current
 
     // CoroutineScope para manejar operaciones asíncronas
     val scope = rememberCoroutineScope()
@@ -222,7 +224,7 @@ fun RegisterScreen(
                     }
                     isLoading = true
                     scope.launch {
-                        val error = registerFunction.registerUser(email, password, nombre, apellido)
+                        val error = registerFunction.registerUser(context,email, password, nombre, apellido)
                         if (error == null) {
                             // Navegar a la pantalla de inicio
                             navController.navigate("home") {
