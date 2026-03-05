@@ -39,6 +39,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
@@ -120,6 +121,9 @@ fun RegisterScreen(
                 value = nombre,
                 onValueChange = { nombre = it },
                 label = { Text("Nombre") },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(
+                    imeAction = ImeAction.Next),
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(bottom = 16.dp)
@@ -130,6 +134,9 @@ fun RegisterScreen(
                 value = apellido,
                 onValueChange = { apellido = it },
                 label = { Text("Apellido") },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(
+                    imeAction = ImeAction.Next),
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(bottom = 16.dp)
@@ -140,7 +147,9 @@ fun RegisterScreen(
                 value = email,
                 onValueChange = { email = it },
                 label = { Text("Email") },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(
+                    imeAction = ImeAction.Next),
                 isError = email.isNotEmpty() && !isValidEmail(email),
                 trailingIcon = {
                     if (email.isNotEmpty()) {
@@ -161,8 +170,11 @@ fun RegisterScreen(
                 value = password,
                 onValueChange = { password = it },
                 label = { Text("Contraseña (mínimo 8 caracteres)") },
+                singleLine = true,
                 visualTransformation = PasswordVisualTransformation(),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Password,
+                    imeAction = ImeAction.Next),
                 isError = password.isNotEmpty() && !isValidPassword(password),
                 trailingIcon = {
                     if (password.isNotEmpty()) {
@@ -184,7 +196,9 @@ fun RegisterScreen(
                 onValueChange = { confirmPassword = it },
                 label = { Text("Confirmar Contraseña") },
                 visualTransformation = PasswordVisualTransformation(),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Password,
+                    imeAction = ImeAction.Done),
                 isError = confirmPassword.isNotEmpty() && confirmPassword != password,
                 trailingIcon = {
                     if (confirmPassword.isNotEmpty()) {
@@ -236,7 +250,6 @@ fun RegisterScreen(
                         isLoading = false
                     }
                 },
-
                 modifier = Modifier.fillMaxWidth(),
                 enabled = !isLoading,
                 shape = RoundedCornerShape(10.dp),
@@ -244,7 +257,6 @@ fun RegisterScreen(
                     containerColor = Color(0xFF58A5D7),
                     contentColor = MaterialTheme.colorScheme.background,
                 )
-                // ... (Parámetros del botón permanecen igual)
             ) {
                 if (isLoading) {
                     CircularProgressIndicator(color = MaterialTheme.colorScheme.background)
@@ -261,7 +273,9 @@ fun RegisterScreen(
                 Text(
                     "Iniciar sesión",
                     color = Color(0xFF58A5D7),
-                    modifier = Modifier.clickable { navController.navigate("login") }
+                    modifier = Modifier.clickable { navController.navigate("login"){
+                        popUpTo("login") { inclusive = true }
+                    } }
                 )
             }
         }

@@ -27,6 +27,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -38,8 +39,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
@@ -60,24 +63,6 @@ fun LoginScreen(navController: NavController) {
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
 
-
-
-    @Serializable
-    data class UserData(
-        val id: String,
-        val nombre: String,
-        val apellido: String,
-        val email: String,
-        val password: String,
-        val created_at: String
-    )
-    // Modelos de datos para las respuestas
-    @Serializable
-    data class LoginResponse(
-        val message: String,
-        val data: List<UserData>,
-        val token: String
-    )
     // Validaciones
     fun isValidEmail(email: String): Boolean {
         return Patterns.EMAIL_ADDRESS.matcher(email).matches()
@@ -86,8 +71,6 @@ fun LoginScreen(navController: NavController) {
     fun isValidPassword(password: String): Boolean {
         return password.length >= 8
     }
-
-    // Función para autenticar con el servidor
 
     // Interfaz de usuario
     Column(
@@ -115,7 +98,7 @@ fun LoginScreen(navController: NavController) {
                     .padding(16.dp)
             ) {
                 Text(
-                    text = "Huellas Felices",
+                    text = "Huellas Seguras",
                     color = MaterialTheme.colorScheme.background,
                     style = MaterialTheme.typography.headlineLarge.copy(
                         fontWeight = FontWeight.Bold
@@ -140,7 +123,10 @@ fun LoginScreen(navController: NavController) {
             value = email,
             onValueChange = { email = it },
             label = { Text("Email") },
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(
+                keyboardType = KeyboardType.Email,
+                imeAction = ImeAction.Next),
             isError = email.isNotEmpty() && !isValidEmail(email),
             trailingIcon = {
                 if (email.isNotEmpty()) {
@@ -160,8 +146,12 @@ fun LoginScreen(navController: NavController) {
             value = password,
             onValueChange = { password = it },
             label = { Text("Contraseña (mínimo 8 caracteres)") },
+            singleLine = true,
             visualTransformation = PasswordVisualTransformation(),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+            keyboardOptions = KeyboardOptions(
+                keyboardType = KeyboardType.Password,
+                imeAction = ImeAction.Done // 4. En el último campo ponemos "Listo"
+            ),
             isError = password.isNotEmpty() && !isValidPassword(password),
             trailingIcon = {
                 if (password.isNotEmpty()) {
@@ -248,7 +238,9 @@ fun LoginScreen(navController: NavController) {
             Text(
                 "Crear cuenta",
                 color = Color(0xFF58A5D7),
-                modifier = Modifier.clickable { navController.navigate("registro") }
+                modifier = Modifier.clickable { navController.navigate("registro"){
+                    popUpTo("registro") { inclusive = true }
+                } }
             )
         }
     }
