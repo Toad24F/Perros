@@ -1,7 +1,6 @@
 package com.example.huellasseguras.Screens
 
 import android.content.Context
-import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -53,116 +52,42 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.huellasseguras.R
-import io.ktor.client.HttpClient
-import io.ktor.client.call.body
-import io.ktor.client.engine.android.Android
-import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
-import io.ktor.client.request.get
-import io.ktor.client.request.post
-import io.ktor.client.request.setBody
-import io.ktor.http.ContentType
-import io.ktor.http.HttpStatusCode
-import io.ktor.http.contentType
-import io.ktor.serialization.kotlinx.json.json
+import com.example.huellasseguras.data.PetsRepository
+import com.example.huellasseguras.model.NewPet
+import com.example.huellasseguras.model.Pet
 import kotlinx.coroutines.launch
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.Json
-@Serializable
-data class PetWithLocation(
-    val id: String,
-    val nombre: String,
-    val edad: Int?,
-    val raza: String?,
-    val peso: String?,
-    val tipo: String,
-    val user_id: String,
-    val created_at: String?,
-    val updated_at: String?,
-    val lat: String?,
-    val lng: String?,
-    val ultima_actualizacion: String?
-)
+
 @Composable
 fun Mascotas(navController: NavController) {
     val context = LocalContext.current
     val sharedPref = remember { context.getSharedPreferences("user_session", Context.MODE_PRIVATE) }
     val userId by remember { mutableStateOf(sharedPref.getString("user_id", "") ?: "") }
     val userName by remember { mutableStateOf(sharedPref.getString("user_name", "Usuario") ?: "Usuario") }
-    val token by remember { mutableStateOf(sharedPref.getString("user_token", "") ?: "") }
-
     var searchText by remember { mutableStateOf("") }
     var showAddPetDialog by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(true) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
-
     // Estado para las mascotas del usuario
-    val userPets = remember { mutableStateListOf<PetWithLocation>() }
+    val userPets = remember { mutableStateListOf<Pet>() }
     val scope = rememberCoroutineScope()
-
-    // Modelos de datos
-    @Serializable
-    data class PetsResponse(
-        val message: String,
-        val data: List<PetWithLocation>
-    )
-
-
-
-    // Función para cargar mascotas desde el servidor
-    fun loadPets() {
-        scope.launch {
-            try {
-                isLoading = true
-                errorMessage = null
-
-                val client = HttpClient(Android) {
-                    install(ContentNegotiation) {
-                        json(Json {
-                            ignoreUnknownKeys = true
-                            isLenient = true
-                        })
-                    }
-                }
-
-                // Usar parámetros de consulta en la URL
-                val response = client.get("http://192.168.137.1:5000/api/v1/mascotas?user_id=$userId") {
-                    contentType(ContentType.Application.Json)
-                }
-
-                when (response.status) {
-                    HttpStatusCode.OK -> {
-                        val petsResponse = response.body<PetsResponse>()
-                        userPets.clear()
-                        userPets.addAll(petsResponse.data)
-                    }
-                    else -> {
-                        errorMessage = try {
-                            val errorResponse = response.body<Map<String, String>>()
-                            errorResponse["message"] ?: "Error al cargar mascotas"
-                        } catch (e: Exception) {
-                            "Error al procesar la respuesta"
-                        }
-                    }
-                }
-            } catch (e: Exception) {
-                errorMessage = when {
-                    e.message?.contains("Unable to resolve host") == true ->
-                        "No se puede conectar al servidor"
-                    e.message?.contains("timed out") == true ->
-                        "Tiempo de espera agotado"
-                    else -> "Error: ${e.message ?: "Error desconocido"}"
-                }
-                Log.e("Mascotas", "Error al cargar", e)
-            } finally {
-                isLoading = false
-            }
-        }
-    }
+    val petsRepository = remember { PetsRepository() }
 
     // Cargar mascotas al iniciar
     LaunchedEffect(userId) {
         if (userId.isNotEmpty()) {
-            loadPets()
+            scope.launch {
+                val result = petsRepository.loadPets(userId)
+                result.onSuccess { pets ->
+                    userPets.clear()
+                    userPets.addAll(pets)
+                    isLoading = false
+                }
+                result.onFailure {
+                    errorMessage = it.message
+                    isLoading = false
+                }
+
+            }
         }
     }
 
@@ -219,8 +144,22 @@ fun Mascotas(navController: NavController) {
                 color = MaterialTheme.colorScheme.error,
                 modifier = Modifier.padding(8.dp)
             )
-            Button(onClick = { loadPets() }) {
-                Text("Reintentar")
+            Button(
+                onClick = {
+                    scope.launch {
+                        val result = petsRepository.loadPets(userId)
+                        result.onSuccess { pets ->
+                            userPets.clear()
+                            userPets.addAll(pets)
+                        }
+                        result.onFailure {
+                            errorMessage = it.message
+                        }
+
+                    }
+                }
+            ) {
+                Text("Cargar mascotas")
             }
         }
 
@@ -260,43 +199,18 @@ fun Mascotas(navController: NavController) {
             onDismiss = { showAddPetDialog = false },
             onSave = { newPet ->
                 scope.launch {
-                    try {
-                        val client = HttpClient(Android) {
-                            install(ContentNegotiation) {
-                                json(Json {
-                                    ignoreUnknownKeys = true
-                                    isLenient = true
-                                })
-                            }
+                    val result = petsRepository.agregarMascota(newPet)
+                    if (result != null) {
+                        errorMessage = result
+                    } else {
+                        val result = petsRepository.loadPets(userId)
+                        result.onSuccess { pets ->
+                            userPets.clear()
+                            userPets.addAll(pets)
                         }
-
-                        val response = client.post("http://192.168.137.1:5000/api/v1/mascotas/") {
-                            contentType(ContentType.Application.Json)
-                            setBody(newPet) // Enviamos el objeto NewPet directamente
+                        result.onFailure {
+                            errorMessage = it.message
                         }
-
-                        when (response.status) {
-                            HttpStatusCode.Created -> {
-                                loadPets() // Recargamos la lista
-                                // Opcional: Mostrar mensaje de éxito
-                                errorMessage = "Mascota agregada exitosamente"
-                            }
-                            else -> {
-                                errorMessage = try {
-                                    val errorResponse = response.body<Map<String, String>>()
-                                    errorResponse["message"] ?: "Error al agregar mascota"
-                                } catch (e: Exception) {
-                                    "Error al procesar la respuesta"
-                                }
-                            }
-                        }
-                    } catch (e: Exception) {
-                        errorMessage = when {
-                            e.message?.contains("Unable to resolve host") == true ->
-                                "No se puede conectar al servidor"
-                            else -> "Error: ${e.message ?: "Error desconocido"}"
-                        }
-                        Log.e("Mascotas", "Error al agregar", e)
                     }
                 }
             },
@@ -306,7 +220,7 @@ fun Mascotas(navController: NavController) {
 }
 
 @Composable
-fun PetItem(pet: PetWithLocation, onClick: () -> Unit) {
+fun PetItem(pet: Pet, onClick: () -> Unit) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier.clickable(onClick = onClick)
@@ -400,7 +314,6 @@ fun AddPetForm(
         "Gato" to listOf("Siamés", "Persa", "Maine Coon", "Bengalí", "Esfinge",
             "Ragdoll", "British Shorthair", "Scottish Fold", "Siberiano",
             "Azul Ruso", "Abisinio", "Birmano", "Angora", "Bombay", "Savannah"),
-        // ... (otros tipos como en tu código original)
     )
 
     AlertDialog(
@@ -530,12 +443,3 @@ fun AddPetForm(
 }
 
 
-@Serializable
-data class NewPet(
-    val nombre: String,
-    val tipo: String,
-    val raza: String? = null,
-    val edad: Int?,
-    val peso: Float?,
-    val user_id: String
-)

@@ -30,6 +30,8 @@ android {
         // CREAR LAS VARIABLES PARA EL BUILDCONFIG
         buildConfigField("String", "SUPABASE_URL", "\"${localProperties.getProperty("SUPABASE_URL", "")}\"")
         buildConfigField("String", "SUPABASE_KEY", "\"${localProperties.getProperty("SUPABASE_KEY", "")}\"")
+        //manifestPlaceholders["MAPS_API_KEY"] = project.properties["MAPS_API_KEY"] as String
+        manifestPlaceholders["MAPS_API_KEY"] = localProperties.getProperty("MAPS_API_KEY", "")
 
     }
 
