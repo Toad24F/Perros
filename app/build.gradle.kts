@@ -16,11 +16,11 @@ if (localPropertiesFile.exists()) {
 }
 
 android {
-    namespace = "com.example.perros"
+    namespace = "com.example.huellasseguras"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.example.perros"
+        applicationId = "com.huellasseguras.app"
         minSdk = 32
         targetSdk = 36
         versionCode = 1

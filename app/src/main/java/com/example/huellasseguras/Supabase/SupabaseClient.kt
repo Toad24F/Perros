@@ -1,6 +1,6 @@
-package com.example.perros.Supabase
+package com.example.huellasseguras.Supabase
 
-import com.example.perros.BuildConfig
+import com.example.huellasseguras.BuildConfig
 import io.github.jan.supabase.auth.Auth
 import io.github.jan.supabase.createSupabaseClient
 

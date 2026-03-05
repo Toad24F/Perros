@@ -1,4 +1,4 @@
-package com.example.perros.Screens
+package com.example.huellasseguras.Screens
 
 import android.util.Patterns
 import androidx.compose.foundation.Image
@@ -44,9 +44,9 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import com.example.perros.R
+import com.example.huellasseguras.R
 import kotlinx.coroutines.launch
-import com.example.perros.data.authRespository
+import com.example.huellasseguras.data.authRespository
 
 @Composable
 fun RegisterScreen(

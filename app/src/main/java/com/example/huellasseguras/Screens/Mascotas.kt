@@ -1,4 +1,4 @@
-package com.example.perros.Screens
+package com.example.huellasseguras.Screens
 
 import android.content.Context
 import android.util.Log
@@ -52,7 +52,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import com.example.perros.R
+import com.example.huellasseguras.R
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.engine.android.Android

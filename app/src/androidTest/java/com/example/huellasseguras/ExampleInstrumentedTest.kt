@@ -1,4 +1,4 @@
-package com.example.perros
+package com.example.huellasseguras
 
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.ext.junit.runners.AndroidJUnit4

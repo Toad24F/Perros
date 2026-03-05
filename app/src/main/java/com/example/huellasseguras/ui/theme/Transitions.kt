@@ -1,4 +1,4 @@
-package com.example.perros.ui.theme
+package com.example.huellasseguras.ui.theme
 
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.EnterTransition

@@ -1,4 +1,4 @@
-package com.example.perros.Screens
+package com.example.huellasseguras.Screens
 
 import android.content.Context
 import androidx.compose.foundation.background
@@ -37,7 +37,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import com.example.perros.R
+import com.example.huellasseguras.R
 import kotlinx.coroutines.launch
 
 @Composable

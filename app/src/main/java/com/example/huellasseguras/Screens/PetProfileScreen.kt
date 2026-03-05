@@ -1,4 +1,4 @@
-package com.example.perros.Screens
+package com.example.huellasseguras.Screens
 
 import android.util.Log
 import androidx.compose.foundation.layout.Box
@@ -45,7 +45,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.example.perros.R
+import com.example.huellasseguras.R
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.engine.android.Android

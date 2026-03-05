@@ -1,4 +1,4 @@
-package com.example.perros
+package com.example.huellasseguras
 
 import org.junit.Test
 

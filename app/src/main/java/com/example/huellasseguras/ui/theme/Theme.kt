@@ -1,4 +1,4 @@
-package com.example.perros.ui.theme
+package com.example.huellasseguras.ui.theme
 
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme

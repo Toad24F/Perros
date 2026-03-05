@@ -1,4 +1,4 @@
-package com.example.perros
+package com.example.huellasseguras
 
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.LaunchedEffect
@@ -15,7 +15,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.example.perros.ui.theme.PerrosTheme
+import com.example.huellasseguras.ui.theme.PerrosTheme
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -28,11 +28,11 @@ import androidx.core.content.ContextCompat
 import androidx.navigation.navArgument
 import kotlinx.coroutines.launch
 import androidx.navigation.NavType
-import com.example.perros.Screens.HomeScreen
-import com.example.perros.Screens.LoginScreen
-import com.example.perros.Screens.PermissionHandler
-import com.example.perros.Screens.PetProfileScreen
-import com.example.perros.Screens.RegisterScreen
+import com.example.huellasseguras.Screens.HomeScreen
+import com.example.huellasseguras.Screens.LoginScreen
+import com.example.huellasseguras.Screens.PermissionHandler
+import com.example.huellasseguras.Screens.PetProfileScreen
+import com.example.huellasseguras.Screens.RegisterScreen
 
 
 class MainActivity : ComponentActivity() {
