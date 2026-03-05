@@ -33,7 +33,7 @@
             android:value="Your key here" />
 
         <activity
-            android:name=".Models.MapsActivity"
+            android:name=".data.MapsActivity"
             android:exported="false"
             android:label="@string/title_activity_maps" />
         <activity

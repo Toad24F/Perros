@@ -1,6 +1,5 @@
 package com.example.perros.Screens
 
-import android.content.Context
 import android.util.Patterns
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -46,20 +45,9 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.perros.R
-import io.ktor.client.HttpClient
-import io.ktor.client.call.body
-import io.ktor.client.engine.android.Android
-import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
-import io.ktor.client.request.post
-import io.ktor.client.request.setBody
-import io.ktor.client.statement.HttpResponse
-import io.ktor.http.ContentType
-import io.ktor.http.HttpStatusCode
-import io.ktor.http.contentType
-import io.ktor.serialization.kotlinx.json.json
+import com.example.perros.data.authRespository
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.Json
 
 @Composable
 fun LoginScreen(navController: NavController) {
@@ -68,7 +56,7 @@ fun LoginScreen(navController: NavController) {
     var password by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf("") }
-
+    val authRespository = remember { authRespository() }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
 
@@ -100,73 +88,6 @@ fun LoginScreen(navController: NavController) {
     }
 
     // Función para autenticar con el servidor
-    suspend fun loginUser(email: String, password: String): Boolean {
-        return try {
-            val client = HttpClient(Android) {
-                install(ContentNegotiation) {
-                    json(Json {
-                        ignoreUnknownKeys = true
-                        isLenient = true
-                    })
-                }
-            }
-
-            val response: HttpResponse = client.post("http://192.168.137.1:5000/api/v1/auth/login") {
-                contentType(ContentType.Application.Json)
-                setBody(mapOf(
-                    "email" to email,
-                    "password" to password
-                ))
-            }
-
-            when (response.status) {
-                HttpStatusCode.OK -> {
-                    val loginResponse = response.body<LoginResponse>()
-
-                    if (loginResponse.data.isNotEmpty()) {
-                        val user = loginResponse.data[0]
-
-                        // Guardar datos de sesión
-                        val sharedPref = context.getSharedPreferences("user_session", Context.MODE_PRIVATE)
-                        with(sharedPref.edit()) {
-                            putString("user_id", user.id)
-                            putString("user_name", user.nombre)
-                            putString("user_surname", user.apellido)
-                            putString("user_email", user.email)
-                            putString("user_token", loginResponse.token)
-                            apply()
-                        }
-                        true
-                    } else {
-                        errorMessage = "No se recibieron datos del usuario"
-                        false
-                    }
-                }
-                HttpStatusCode.Unauthorized -> {
-                    errorMessage = "Credenciales incorrectas"
-                    false
-                }
-                else -> {
-                    errorMessage = try {
-                        val errorResponse = response.body<Map<String, String>>()
-                        errorResponse["message"] ?: "Error desconocido del servidor"
-                    } catch (e: Exception) {
-                        "Error al procesar la respuesta"
-                    }
-                    false
-                }
-            }
-        } catch (e: Exception) {
-            errorMessage = when {
-                e.message?.contains("Unable to resolve host") == true ->
-                    "Error de conexión: Servidor no disponible"
-                e.message?.contains("timed out") == true ->
-                    "Error: Tiempo de espera agotado"
-                else -> "Error: ${e.message ?: "Error desconocido"}"
-            }
-            false
-        }
-    }
 
     // Interfaz de usuario
     Column(
@@ -292,12 +213,14 @@ fun LoginScreen(navController: NavController) {
                 errorMessage = ""
 
                 scope.launch {
-                    val success = loginUser(email, password)
+                    val error = authRespository.loginUser(context,email, password)
 
-                    if (success) {
+                    if (error==null) {
                         navController.navigate("home") {
                             popUpTo(0)
                         }
+                    }else{
+                        errorMessage = error
                     }
                     isLoading = false
                 }

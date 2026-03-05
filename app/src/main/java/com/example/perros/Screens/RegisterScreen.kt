@@ -45,7 +45,7 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.perros.R
 import kotlinx.coroutines.launch
-import com.example.perros.Models.RegisterFunction
+import com.example.perros.data.authRespository
 
 @Composable
 fun RegisterScreen(
@@ -59,7 +59,7 @@ fun RegisterScreen(
     var confirmPassword by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf("") }
-    val registerFunction = remember { RegisterFunction() }
+    val authRespository = remember { authRespository() }
     val context = LocalContext.current
 
     // CoroutineScope para manejar operaciones asíncronas
@@ -224,7 +224,7 @@ fun RegisterScreen(
                     }
                     isLoading = true
                     scope.launch {
-                        val error = registerFunction.registerUser(context,email, password, nombre, apellido)
+                        val error = authRespository.registerUser(context,email, password, nombre, apellido)
                         if (error == null) {
                             // Navegar a la pantalla de inicio
                             navController.navigate("home") {
