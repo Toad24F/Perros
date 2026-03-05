@@ -28,6 +28,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -39,6 +40,9 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.huellasseguras.R
+import com.example.huellasseguras.data.PetsRepository
+import com.example.huellasseguras.model.Pet
+import com.example.huellasseguras.model.PetLocation
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
@@ -85,56 +89,75 @@ fun MapScreen() {
     val scope = rememberCoroutineScope()
     val sharedPref = remember { context.getSharedPreferences("user_session", Context.MODE_PRIVATE) }
     val userId by remember { mutableStateOf(sharedPref.getString("user_id", "") ?: "") }
-    var pets by remember { mutableStateOf<List<PetLocation>>(emptyList()) }
+    val userPetLocation = remember { mutableStateListOf<PetLocation>() }
     var selectedPet by remember { mutableStateOf<PetLocation?>(null) }
     var isLoading by remember { mutableStateOf(true) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
+    val petsRepository = remember { PetsRepository() }
 
     // Configuración del mapa
     val isDarkTheme = isSystemInDarkTheme()
     val locationPermissionState = rememberPermissionState(Manifest.permission.ACCESS_FINE_LOCATION)
     val cameraPositionState = rememberCameraPositionState()
 
+
     // Función para cargar mascotas
-    fun loadPets() {
-        scope.launch {
-            try {
-                val client = HttpClient(Android) {
-                    install(ContentNegotiation) {
-                        json(Json { ignoreUnknownKeys = true })
-                    }
-                }
-
-                val response = client.get("http://192.168.137.1:5000/api/v1/mascotas?user_id=$userId")
-                val petsResponse = response.body<PetsLocationResponse>()
-                pets = petsResponse.data.map { pet ->
-                    PetLocation(
-                        id = pet.id,
-                        nombre = pet.nombre,
-                        tipo = pet.tipo,
-                        lat = pet.lat,
-                        lng = pet.lng
-                    )
-                }
-
-                // Seleccionar la primera mascota por defecto
-                if (pets.isNotEmpty() && selectedPet == null) {
-                    selectedPet = pets[0]
-                }
-            } catch (e: Exception) {
-                errorMessage = "Error al cargar mascotas: ${e.message}"
-            } finally {
-                isLoading = false
-            }
-        }
-    }
+//    fun loadPets() {
+//        scope.launch {
+//            try {
+//                val client = HttpClient(Android) {
+//                    install(ContentNegotiation) {
+//                        json(Json { ignoreUnknownKeys = true })
+//                    }
+//                }
+//
+//                val response = client.get("http://192.168.137.1:5000/api/v1/mascotas?user_id=$userId")
+//                val petsResponse = response.body<PetsLocationResponse>()
+//                userPetLocation = petsResponse.data.map { pet ->
+//                    PetLocation(
+//                        id = pet.id,
+//                        nombre = pet.nombre,
+//                        tipo = pet.tipo,
+//                        lat = pet.lat,
+//                        lng = pet.lng
+//                    )
+//                }
+//
+//                // Seleccionar la primera mascota por defecto
+//                if (userPetLocation.isNotEmpty() && selectedPet == null) {
+//                    selectedPet = userPetLocation[0]
+//                }
+//            } catch (e: Exception) {
+//                errorMessage = "Error al cargar mascotas: ${e.message}"
+//            } finally {
+//                isLoading = false
+//            }
+//        }
+//    }
 
     // Cargar mascotas al inicio y cada 20 segundos
+    // Dentro de MapScreen.kt
     LaunchedEffect(userId) {
-        loadPets()
+        if (userId.isBlank()) return@LaunchedEffect
+
         while (true) {
-            delay(20000)
-            loadPets()
+            isLoading = true // Solo la primera vez o si quieres mostrar el indicador
+            val result = petsRepository.loadPetsLocation(userId)
+
+            result.onSuccess { pets ->
+                userPetLocation.clear()
+                userPetLocation.addAll(pets)
+
+                // Seleccionar la primera por defecto si no hay ninguna seleccionada
+                if (selectedPet == null && pets.isNotEmpty()) {
+                    selectedPet = pets[0]
+                }
+            }.onFailure {
+                errorMessage = "Error: ${it.message}"
+            }
+
+            isLoading = false
+            delay(20000) // Espera 20 segundos antes de la siguiente actualización
         }
     }
 
@@ -202,7 +225,7 @@ fun MapScreen() {
                 ) {
 
                     // Marcadores de mascotas con ventana de información (nombre visible)
-                    pets.forEach { pet ->
+                    userPetLocation.forEach { pet ->
                         val position = LatLng(pet.lat.toDouble(), pet.lng.toDouble())
                         Marker(
                             state = MarkerState(position = position),
@@ -228,13 +251,27 @@ fun MapScreen() {
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(errorMessage!!, color = MaterialTheme.colorScheme.error)
-                        Button(onClick = { loadPets() }) {
+                        Button(onClick = {
+                            scope.launch {
+                                val result = petsRepository.loadPetsLocation(userId)
+                                result.onSuccess { pets ->
+                                    userPetLocation.clear()
+                                    userPetLocation.addAll(pets)
+                                    isLoading = false
+                                }
+                                result.onFailure {
+                                    errorMessage = it.message
+                                    isLoading = false
+                                }
+
+                            }
+                        }) {
                             Text("Reintentar")
                         }
                     }
                 } else {
                     LazyColumn {
-                        items(pets) { pet ->
+                        items(userPetLocation) { pet ->
                             PetMapItem(
                                 pet = pet,
                                 isSelected = selectedPet?.id == pet.id,
@@ -295,17 +332,4 @@ fun PetMapItem(pet: PetLocation, isSelected: Boolean, onClick: () -> Unit) {
         }
     }
 }
-@Serializable
-data class PetLocation(
-    val id: String,
-    val nombre: String,
-    val tipo: String,
-    val lat: String,
-    val lng: String
-)
 
-@Serializable
-data class PetsLocationResponse(
-    val message: String,
-    val data: List<PetLocation>
-)
