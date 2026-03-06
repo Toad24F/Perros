@@ -1,6 +1,5 @@
 package com.example.huellasseguras.Screens
 
-import android.util.Log
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -46,22 +45,14 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.huellasseguras.R
-import io.ktor.client.HttpClient
-import io.ktor.client.call.body
-import io.ktor.client.engine.android.Android
-import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
-import io.ktor.client.request.get
-import io.ktor.http.ContentType
-import io.ktor.http.HttpStatusCode
-import io.ktor.http.contentType
-import io.ktor.serialization.kotlinx.json.json
+import com.example.huellasseguras.data.PetsRepository
+import com.example.huellasseguras.model.Pet
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.Json
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PetProfileScreen(petId: String?, navController: NavController1) {
+fun PetProfileScreen(petId: String, navController: NavController1) {
     @Serializable
     data class PetDetail(
         val id: String,
@@ -76,80 +67,92 @@ fun PetProfileScreen(petId: String?, navController: NavController1) {
         // Solo incluye los campos que realmente devuelve tu API
     )
 
-    val pet = remember { mutableStateOf<PetDetail?>(null) }
+    val pet1 = remember { mutableStateOf<Pet?>(null) }
+    var pet by remember { mutableStateOf<Pet?>(null) }
     var isLoading by remember { mutableStateOf(true) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
+    val petsRepository = remember { PetsRepository() }
 
 
     // Modelo para la respuesta de la API
     @Serializable
     data class PetDetailResponse(
         val message: String,
-        val data: List<PetDetail>
+        val data: List<Pet>
     )
 
     // Función para cargar los datos de la mascota
-    fun loadPetData() {
-        scope.launch {
-            try {
-                isLoading = true
-                errorMessage = null
-
-                if (petId == null) {
-                    errorMessage = "ID de mascota no válido"
-                    isLoading = false
-                    return@launch
-                }
-
-                val client = HttpClient(Android) {
-                    install(ContentNegotiation) {
-                        json(Json {
-                            ignoreUnknownKeys = true  // Esto permite ignorar campos extraños
-                            isLenient = true
-                        })
-                    }
-                }
-
-                val response = client.get("http://192.168.137.1:5000/api/v1/mascotas/$petId") {
-                    contentType(ContentType.Application.Json)
-                }
-
-                when (response.status) {
-                    HttpStatusCode.OK -> {
-                        val apiResponse = response.body<PetDetailResponse>()
-                        if (apiResponse.data.isNotEmpty()) {
-                            // Mapeamos a los campos que necesitas mostrar
-                            pet.value = apiResponse.data[0]
-                        } else {
-                            errorMessage = "No se encontraron datos"
-                        }
-                    }
-
-                    else -> {
-                        errorMessage = "Error: ${response.status}"
-                    }
-                }
-            } catch (e: Exception) {
-                errorMessage = "Error al cargar: ${e.message}"
-                Log.e("PetProfile", "Error", e)
-            } finally {
-                isLoading = false
-            }
-        }
-    }
+//    fun loadPetData() {
+//        scope.launch {
+//            try {
+//                isLoading = true
+//                errorMessage = null
+//
+//                if (petId == null) {
+//                    errorMessage = "ID de mascota no válido"
+//                    isLoading = false
+//                    return@launch
+//                }
+//
+//                val client = HttpClient(Android) {
+//                    install(ContentNegotiation) {
+//                        json(Json {
+//                            ignoreUnknownKeys = true  // Esto permite ignorar campos extraños
+//                            isLenient = true
+//                        })
+//                    }
+//                }
+//
+//                val response = client.get("http://192.168.137.1:5000/api/v1/mascotas/$petId") {
+//                    contentType(ContentType.Application.Json)
+//                }
+//
+//                when (response.status) {
+//                    HttpStatusCode.OK -> {
+//                        val apiResponse = response.body<PetDetailResponse>()
+//                        if (apiResponse.data.isNotEmpty()) {
+//                            // Mapeamos a los campos que necesitas mostrar
+//                            pet.value = apiResponse.data[0]
+//                        } else {
+//                            errorMessage = "No se encontraron datos"
+//                        }
+//                    }
+//
+//                    else -> {
+//                        errorMessage = "Error: ${response.status}"
+//                    }
+//                }
+//            } catch (e: Exception) {
+//                errorMessage = "Error al cargar: ${e.message}"
+//                Log.e("PetProfile", "Error", e)
+//            } finally {
+//                isLoading = false
+//            }
+//        }
+//    }
 
     // Cargar datos al iniciar o cuando cambia el ID
     LaunchedEffect(petId) {
-        loadPetData()
+        scope.launch {
+            val result = petsRepository.loadPetData(petId)
+            result.onSuccess { petData ->
+                pet = petData
+                isLoading = false
+            }.onFailure { error ->
+                errorMessage = "No se pudo cargar la información: ${error.message}"
+                isLoading = false
+            }
+
+        }
     }
 
     // Diseño de la pantalla
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text("Perfil de ${pet.value?.nombre ?: "Mascota"}") },
+                title = { Text("Perfil de ${pet1.value?.nombre ?: "Mascota"}") },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.Default.ArrowBack, "Regresar")
@@ -178,14 +181,24 @@ fun PetProfileScreen(petId: String?, navController: NavController1) {
                             color = MaterialTheme.colorScheme.error,
                             modifier = Modifier.padding(16.dp)
                         )
-                        Button(onClick = { loadPetData() }) {
+                        Button(onClick = { scope.launch {
+                            val result = petsRepository.loadPetData(petId)
+                            result.onSuccess { petData ->
+                                pet = petData
+                                isLoading = false
+                            }.onFailure { error ->
+                                errorMessage = "No se pudo cargar la información: ${error.message}"
+                                isLoading = false
+                            }
+
+                        } }) {
                             Text("Reintentar")
                         }
                     }
                 }
 
-                pet.value != null -> {
-                    val currentPet = pet.value!!
+                pet != null -> {
+                    val currentPet = pet
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
@@ -194,7 +207,7 @@ fun PetProfileScreen(petId: String?, navController: NavController1) {
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         // Icono según tipo
-                        val iconRes = when (currentPet.tipo.lowercase()) {
+                        val iconRes = when (currentPet?.tipo?.lowercase()) {
                             "perro" -> R.drawable.ic_dog
                             "gato" -> R.drawable.ic_cat
                             "ave" -> R.drawable.ic_bird
@@ -213,7 +226,7 @@ fun PetProfileScreen(petId: String?, navController: NavController1) {
                         ) {
                             Icon(
                                 painter = painterResource(id = iconRes),
-                                contentDescription = "Tipo ${currentPet.tipo}",
+                                contentDescription = "Tipo ${currentPet?.tipo}",
                                 modifier = Modifier.size(80.dp),
                                 tint = MaterialTheme.colorScheme.onPrimaryContainer
                             )
@@ -223,7 +236,7 @@ fun PetProfileScreen(petId: String?, navController: NavController1) {
 
                         // Nombre
                         Text(
-                            text = currentPet.nombre,
+                            text = currentPet?.nombre?: "Mascota",
                             style = MaterialTheme.typography.headlineMedium,
                             fontWeight = FontWeight.Bold
                         )
@@ -232,7 +245,7 @@ fun PetProfileScreen(petId: String?, navController: NavController1) {
 
                         // Tipo
                         Text(
-                            text = currentPet.tipo,
+                            text = currentPet?.tipo ?:"Tipo de mascota",
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                         )
@@ -278,7 +291,7 @@ fun PetProfileScreen(petId: String?, navController: NavController1) {
                                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                                         )
                                         Text(
-                                            text = currentPet.edad?.toString() ?: "N/A",
+                                            text = currentPet?.edad?.toString() ?: "N/A",
                                             style = MaterialTheme.typography.bodyMedium,
                                             fontWeight = FontWeight.Medium
                                         )
@@ -297,7 +310,7 @@ fun PetProfileScreen(petId: String?, navController: NavController1) {
                                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                                         )
                                         Text(
-                                            text = currentPet.raza ?: "No especificada",
+                                            text = currentPet?.raza ?: "No especificada",
                                             style = MaterialTheme.typography.bodyMedium,
                                             fontWeight = FontWeight.Medium
                                         )
@@ -316,7 +329,7 @@ fun PetProfileScreen(petId: String?, navController: NavController1) {
                                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                                         )
                                         Text(
-                                            text = currentPet.peso?.let { "$it kg" } ?: "N/A",
+                                            text = currentPet?.peso?.let { "$it kg" } ?: "N/A",
                                             style = MaterialTheme.typography.bodyMedium,
                                             fontWeight = FontWeight.Medium
                                         )
@@ -348,7 +361,7 @@ fun PetProfileScreen(petId: String?, navController: NavController1) {
                                     Row(
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .background(MaterialTheme.colorScheme.primaryContainer)
+                                            .background(MaterialTheme.colorScheme.secondaryContainer)
                                             .padding(vertical = 12.dp, horizontal = 16.dp)
                                     ) {
                                         Text(

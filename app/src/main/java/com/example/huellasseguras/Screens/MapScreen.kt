@@ -94,47 +94,10 @@ fun MapScreen() {
     var isLoading by remember { mutableStateOf(true) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     val petsRepository = remember { PetsRepository() }
-
     // Configuración del mapa
     val isDarkTheme = isSystemInDarkTheme()
     val locationPermissionState = rememberPermissionState(Manifest.permission.ACCESS_FINE_LOCATION)
     val cameraPositionState = rememberCameraPositionState()
-
-
-    // Función para cargar mascotas
-//    fun loadPets() {
-//        scope.launch {
-//            try {
-//                val client = HttpClient(Android) {
-//                    install(ContentNegotiation) {
-//                        json(Json { ignoreUnknownKeys = true })
-//                    }
-//                }
-//
-//                val response = client.get("http://192.168.137.1:5000/api/v1/mascotas?user_id=$userId")
-//                val petsResponse = response.body<PetsLocationResponse>()
-//                userPetLocation = petsResponse.data.map { pet ->
-//                    PetLocation(
-//                        id = pet.id,
-//                        nombre = pet.nombre,
-//                        tipo = pet.tipo,
-//                        lat = pet.lat,
-//                        lng = pet.lng
-//                    )
-//                }
-//
-//                // Seleccionar la primera mascota por defecto
-//                if (userPetLocation.isNotEmpty() && selectedPet == null) {
-//                    selectedPet = userPetLocation[0]
-//                }
-//            } catch (e: Exception) {
-//                errorMessage = "Error al cargar mascotas: ${e.message}"
-//            } finally {
-//                isLoading = false
-//            }
-//        }
-//    }
-
     // Cargar mascotas al inicio y cada 20 segundos
     // Dentro de MapScreen.kt
     LaunchedEffect(userId) {
@@ -189,7 +152,7 @@ fun MapScreen() {
     // Mover cámara cuando se selecciona una mascota
     LaunchedEffect(selectedPet) {
         selectedPet?.let { pet ->
-            val latLng = LatLng(pet.lat.toDouble(), pet.lng.toDouble())
+            val latLng = LatLng(pet.lat, pet.lng)
             cameraPositionState.animate(
                 update = CameraUpdateFactory.newLatLngZoom(latLng, 15f),
                 durationMs = 1000

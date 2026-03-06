@@ -1,7 +1,5 @@
 package com.example.huellasseguras.data
 
-import android.util.Log
-
 import com.example.huellasseguras.Supabase.Supabase
 import com.example.huellasseguras.model.NewPet
 import com.example.huellasseguras.model.Pet
@@ -25,7 +23,7 @@ class PetsRepository {
         }
     }
     // Función para cargar mascotas del usuario
-        suspend fun loadPets(userId: String): Result<List<Pet>> {
+    suspend fun loadPets(userId: String): Result<List<Pet>> {
             return try {
                 val pets = Supabase.client
                     .from("mascotas")
@@ -36,6 +34,7 @@ class PetsRepository {
                 Result.failure(e)
             }
         }
+    //funcion para cargar la ubicacion de las mascotas
     suspend fun loadPetsLocation(userId: String): Result<List<PetLocation>> {
         return try {
             val response = Supabase.client
@@ -66,6 +65,26 @@ class PetsRepository {
             e.printStackTrace()
             Result.failure(e)
         }
+    }
+    //Funcion para cargar los datos de una mascota en especifico
+    suspend fun loadPetData(petId: String): Result<Pet> {
+        return try {
+            // 1. Usamos .select() pero agregamos un filtro .eq()
+            val pet = Supabase.client // Asegúrate de usar tu objeto cliente
+                .from("mascotas")
+                .select {
+                    filter {
+                        eq("id", petId) // Filtramos por el ID que recibes
+                    }
+                }
+                .decodeSingle<Pet>() // Usamos decodeSingle porque esperamos una sola mascota
+
+            Result.success(pet)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            Result.failure(e)
+        }
+
     }
 
 }
