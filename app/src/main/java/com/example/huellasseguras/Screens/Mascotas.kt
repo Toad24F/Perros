@@ -187,36 +187,12 @@ fun Mascotas(navController: NavController) {
 
             item {
                 AddPetButton {
-                    showAddPetDialog = true
+                        navController.navigate("addPet")
                 }
             }
         }
     }
 
-    // Diálogo para agregar mascota
-    if (showAddPetDialog) {
-        AddPetForm(
-            onDismiss = { showAddPetDialog = false },
-            onSave = { newPet ->
-                scope.launch {
-                    val result = petsRepository.agregarMascota(newPet)
-                    if (result != null) {
-                        errorMessage = result
-                    } else {
-                        val result = petsRepository.loadPets(userId)
-                        result.onSuccess { pets ->
-                            userPets.clear()
-                            userPets.addAll(pets)
-                        }
-                        result.onFailure {
-                            errorMessage = it.message
-                        }
-                    }
-                }
-            },
-            userId = userId
-        )
-    }
 }
 
 @Composable
@@ -269,7 +245,7 @@ fun PetItem(pet: Pet, onClick: () -> Unit) {
 fun AddPetButton(onClick: () -> Unit) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.clickable(onClick = onClick)
+        modifier = Modifier.clickable(onClick = onClick )
     ) {
         Box(
             modifier = Modifier
@@ -293,153 +269,5 @@ fun AddPetButton(onClick: () -> Unit) {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun AddPetForm(
-    onDismiss: () -> Unit,
-    onSave: (NewPet) -> Unit,
-    userId: String
-) {
-    var nombre by remember { mutableStateOf("") }
-    var edad by remember { mutableStateOf("") }
-    var peso by remember { mutableStateOf("") }
-    var tipoSeleccionado by remember { mutableStateOf("") }
-    var razaSeleccionada by remember { mutableStateOf("") }
-
-    // Tipos de mascotas y sus razas
-    val tiposMascotas = mapOf(
-        "Perro" to listOf("Labrador", "Golden Retriever", "Bulldog", "Poodle", "Beagle",
-            "Chihuahua", "Pastor Alemán", "Boxer", "Dálmata", "Husky",
-            "Pug", "Rottweiler", "Shih Tzu", "Doberman", "Gran Danés"),
-        "Gato" to listOf("Siamés", "Persa", "Maine Coon", "Bengalí", "Esfinge",
-            "Ragdoll", "British Shorthair", "Scottish Fold", "Siberiano",
-            "Azul Ruso", "Abisinio", "Birmano", "Angora", "Bombay", "Savannah"),
-    )
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Agregar nueva mascota") },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                OutlinedTextField(
-                    value = nombre,
-                    onValueChange = { nombre = it },
-                    label = { Text("Nombre de la mascota") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                var expandedTipo by remember { mutableStateOf(false) }
-                ExposedDropdownMenuBox(
-                    expanded = expandedTipo,
-                    onExpandedChange = { expandedTipo = !expandedTipo }
-                ) {
-                    OutlinedTextField(
-                        value = tipoSeleccionado,
-                        onValueChange = {},
-                        readOnly = true,
-                        label = { Text("Tipo de mascota") },
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedTipo) },
-                        modifier = Modifier
-                            .menuAnchor()
-                            .fillMaxWidth()
-                    )
-                    ExposedDropdownMenu(
-                        expanded = expandedTipo,
-                        onDismissRequest = { expandedTipo = false }
-                    ) {
-                        tiposMascotas.keys.forEach { tipo ->
-                            DropdownMenuItem(
-                                text = { Text(tipo) },
-                                onClick = {
-                                    tipoSeleccionado = tipo
-                                    razaSeleccionada = ""
-                                    expandedTipo = false
-                                }
-                            )
-                        }
-                    }
-                }
-
-                if (tipoSeleccionado.isNotEmpty()) {
-                    var expandedRaza by remember { mutableStateOf(false) }
-
-                    ExposedDropdownMenuBox(
-                        expanded = expandedRaza,
-                        onExpandedChange = { expandedRaza = !expandedRaza }
-                    ) {
-                        OutlinedTextField(
-                            value = razaSeleccionada,
-                            onValueChange = {},
-                            readOnly = true,
-                            label = { Text("Raza") },
-                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedRaza) },
-                            modifier = Modifier
-                                .menuAnchor()
-                                .fillMaxWidth()
-                        )
-                        ExposedDropdownMenu(
-                            expanded = expandedRaza,
-                            onDismissRequest = { expandedRaza = false }
-                        ) {
-                            tiposMascotas[tipoSeleccionado]?.forEach { raza ->
-                                DropdownMenuItem(
-                                    text = { Text(raza) },
-                                    onClick = {
-                                        razaSeleccionada = raza
-                                        expandedRaza = false
-                                    }
-                                )
-                            }
-                        }
-                    }
-                }
-
-                OutlinedTextField(
-                    value = edad,
-                    onValueChange = { if (it.all { char -> char.isDigit() }) edad = it },
-                    label = { Text("Edad (años)") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                OutlinedTextField(
-                    value = peso,
-                    onValueChange = {
-                        if (it.isEmpty() || it.matches(Regex("^\\d*\\.?\\d*$"))) {
-                            peso = it
-                        }
-                    },
-                    label = { Text("Peso (kg)") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
-        },
-        confirmButton = {
-            Button(
-                onClick = {
-                    val newPet = NewPet(
-                        nombre = nombre,
-                        tipo = tipoSeleccionado,
-                        raza = razaSeleccionada.ifEmpty { null },
-                        edad = edad.toIntOrNull(),
-                        peso = peso.toFloatOrNull(),
-                        user_id = userId
-                    )
-                    onSave(newPet)
-                    onDismiss()
-                },
-                enabled = nombre.isNotBlank() && tipoSeleccionado.isNotBlank()
-            ) {
-                Text("Guardar")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancelar")
-            }
-        }
-    )
-}
 
 

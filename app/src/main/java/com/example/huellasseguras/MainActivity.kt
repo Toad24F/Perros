@@ -28,6 +28,7 @@ import androidx.core.content.ContextCompat
 import androidx.navigation.navArgument
 import kotlinx.coroutines.launch
 import androidx.navigation.NavType
+import com.example.huellasseguras.Screens.AddPetScreen
 import com.example.huellasseguras.Screens.HomeScreen
 import com.example.huellasseguras.Screens.LoginScreen
 import com.example.huellasseguras.Screens.PermissionHandler
@@ -86,7 +87,9 @@ fun CheckAuthScreen(navController: NavController) {
 // --- Navegación entre pantallas ---
 @Composable
 public fun AppNavigation() {
-    PermissionHandler() // Añade esto al inicio
+    val context = LocalContext.current
+
+    PermissionHandler()
     val navController = rememberNavController()
     CheckAuthScreen(navController)
     NavHost(
@@ -118,7 +121,11 @@ public fun AppNavigation() {
                 fadeOut(animationSpec = tween(300))
             }
         ) { HomeScreen(navController) }
-
+        composable("addPet") {
+            val sharedPref = context.getSharedPreferences("user_session", Context.MODE_PRIVATE)
+            val userId = sharedPref.getString("user_id", "") ?: ""
+            AddPetScreen(navController, userId)
+        }
         composable(
             route = "registro",
             enterTransition = {
@@ -151,7 +158,9 @@ public fun AppNavigation() {
             }
         }
     }
+
 }
+
 // Función para verificar si el GPS está activado
 public fun isLocationEnabled(context: Context): Boolean {
     val locationManager = ContextCompat.getSystemService(

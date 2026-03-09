@@ -1,5 +1,7 @@
 package com.example.huellasseguras.data
 
+import android.content.Context
+import android.net.Uri
 import com.example.huellasseguras.Supabase.Supabase
 import com.example.huellasseguras.model.NewPet
 import com.example.huellasseguras.model.Pet
@@ -8,18 +10,23 @@ import com.example.huellasseguras.model.PetLocationRaw
 
 import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.query.Columns
+import io.github.jan.supabase.storage.storage
 
 
 class PetsRepository {
 
-    suspend fun agregarMascota(newPet: NewPet): String? {
-        return try{
-            Supabase.client.from("mascotas").insert(newPet)
-            null
-        }catch (e: Exception) {
-            val error = e.message
+    suspend fun agregarMascota(newPet: NewPet): Result<Pet> {
+        return try {
+            // Al insertar, le pedimos a Supabase que nos devuelva el registro creado
+            val pet = Supabase.client.from("mascotas")
+                .insert(newPet) {
+                    select()
+                }
+                .decodeSingle<Pet>()
+            Result.success(pet)
+        } catch (e: Exception) {
             e.printStackTrace()
-            return error
+            Result.failure(e)
         }
     }
     // Función para cargar mascotas del usuario
@@ -85,6 +92,42 @@ class PetsRepository {
             Result.failure(e)
         }
 
+    }
+    // Función para subir la foto (asegúrate de tener 'import io.github.jan_tennert.supabase.storage.storage')
+    suspend fun uploadPetPhoto(petId: String, imageUri: Uri, context: Context): Result<String> {
+        return try {
+            val bucket = Supabase.client.storage.from("mascotas_fotos")
+            val fileName = "pet_$petId.jpg"
+
+            val inputStream = context.contentResolver.openInputStream(imageUri)
+            val bytes = inputStream?.readBytes() ?: throw Exception("No se pudo leer la imagen")
+
+            bucket.upload(path = fileName, data = bytes) {
+                upsert = true
+            }
+
+            val url = bucket.publicUrl(fileName)
+            Result.success(url)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            Result.failure(e)
+        }
+    }
+
+    // Función para actualizar la URL de la foto en la tabla
+    suspend fun updatePetPhotoUrl(petId: String, photoUrl: String): Boolean {
+        return try {
+            Supabase.client.from("mascotas").update(
+                {
+                    set("foto_url", photoUrl)
+                }
+            ) {
+                filter { eq("id", petId) }
+            }
+            true
+        } catch (e: Exception) {
+            false
+        }
     }
 
 }

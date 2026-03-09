@@ -78,6 +78,7 @@ dependencies {
     implementation(libs.transport.runtime)
     implementation(libs.firebase.crashlytics.buildtools)
     implementation(libs.androidx.navigation.common.android)
+    implementation(libs.androidx.compose.ui.graphics)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -99,6 +100,10 @@ dependencies {
     implementation("io.github.jan-tennert.supabase:auth-kt:3.4.1")
     // Serialización necesaria para los datos
     implementation("io.ktor:ktor-client-android:3.4.1")
+    // Para mostrar imágenes desde una URL (Coil)
+    implementation("io.coil-kt:coil-compose:2.7.0")
+// Para el almacenamiento de Supabase (verifica que la versión coincida con las que ya tienes)
+    implementation("io.github.jan-tennert.supabase:storage-kt:3.4.1")
 
 
 

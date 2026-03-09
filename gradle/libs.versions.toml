@@ -29,6 +29,7 @@ securityCrypto = "1.1.0-alpha07"
 transportRuntime = "4.0.0"
 firebaseCrashlyticsBuildtools = "3.0.3"
 navigationCommonAndroid = "2.9.0"
+uiGraphics = "1.10.4"
 
 [libraries]
 accompanist-permissions = { module = "com.google.accompanist:accompanist-permissions", version.ref = "accompanistPermissions" }
@@ -64,6 +65,7 @@ maps-compose = { group = "com.google.maps.android", name = "maps-compose", versi
 transport-runtime = { group = "com.google.android.datatransport", name = "transport-runtime", version.ref = "transportRuntime" }
 firebase-crashlytics-buildtools = { group = "com.google.firebase", name = "firebase-crashlytics-buildtools", version.ref = "firebaseCrashlyticsBuildtools" }
 androidx-navigation-common-android = { group = "androidx.navigation", name = "navigation-common-android", version.ref = "navigationCommonAndroid" }
+androidx-compose-ui-graphics = { group = "androidx.compose.ui", name = "ui-graphics", version.ref = "uiGraphics" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

@@ -98,8 +98,8 @@ fun MapScreen() {
     val isDarkTheme = isSystemInDarkTheme()
     val locationPermissionState = rememberPermissionState(Manifest.permission.ACCESS_FINE_LOCATION)
     val cameraPositionState = rememberCameraPositionState()
+
     // Cargar mascotas al inicio y cada 20 segundos
-    // Dentro de MapScreen.kt
     LaunchedEffect(userId) {
         if (userId.isBlank()) return@LaunchedEffect
 
@@ -162,7 +162,6 @@ fun MapScreen() {
 
     // Diseño de la pantalla
     Scaffold(
-
     ) { paddingValues ->
         Column(
             modifier = Modifier

@@ -19,6 +19,7 @@ data class Pet(
     val edad: Int?,
     val peso: Float?,
     val user_id: String,
+    val foto_url: String? = null
 )
 
 @Serializable
@@ -27,7 +28,8 @@ data class PetLocation(
     val nombre: String,
     val tipo: String,
     val lat: Double,
-    val lng: Double
+    val lng: Double,
+    val foto_url: String? = null
 )
 @Serializable
 data class PetLocationRaw(
