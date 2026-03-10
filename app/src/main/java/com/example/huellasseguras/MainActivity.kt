@@ -34,6 +34,8 @@ import com.example.huellasseguras.Screens.LoginScreen
 import com.example.huellasseguras.Screens.PermissionHandler
 import com.example.huellasseguras.Screens.PetProfileScreen
 import com.example.huellasseguras.Screens.RegisterScreen
+import com.example.huellasseguras.Supabase.Supabase
+import io.github.jan.supabase.auth.auth
 
 
 class MainActivity : ComponentActivity() {
@@ -51,50 +53,25 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
-@Composable
-fun CheckAuthScreen(navController: NavController) {
-    val context = LocalContext.current
-    val scope = rememberCoroutineScope()
-
-    LaunchedEffect(Unit) {
-        // Verificar tanto en SharedPreferences como en Supabase Auth para mayor robustez
-        val sharedPref = context.getSharedPreferences("user_session", Context.MODE_PRIVATE)
-        val userName = sharedPref.getString("user_name", null)
-        val userEmail = sharedPref.getString("user_email", null)
-
-        scope.launch {
-            try {
-                if (userEmail != null && userName != null) {
-                    // Usuario autenticado - ir a home
-                    navController.navigate("home") {
-                        popUpTo(0) // Limpiar back stack
-                    }
-                } else {
-                    // No autenticado - ir a login
-                    navController.navigate("login") {
-                        popUpTo(0) // Limpiar back stack
-                    }
-                }
-            } catch (e: Exception) {
-                // En caso de error al verificar sesión, ir a login
-                navController.navigate("login") {
-                    popUpTo(0)
-                }
-            }
-        }
-    }
-}
 // --- Navegación entre pantallas ---
 @Composable
 public fun AppNavigation() {
+    Supabase.client.auth.sessionStatus
     val context = LocalContext.current
-
     PermissionHandler()
     val navController = rememberNavController()
-    CheckAuthScreen(navController)
+    //CheckAuthScreen(navController)
+    val sharedPref = context.getSharedPreferences("user_session", Context.MODE_PRIVATE)
+    val userName = sharedPref.getString("user_name", null)
+    val userEmail = sharedPref.getString("user_email", null)
+    val startDestination = if (userName != null && userEmail != null) {
+        "home"
+    } else {
+        "login"
+    }
     NavHost(
         navController = navController,
-        startDestination = "login"
+        startDestination = startDestination
     ) {
         composable(
             route = "login",

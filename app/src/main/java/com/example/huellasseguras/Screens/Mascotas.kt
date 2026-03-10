@@ -63,10 +63,9 @@ import kotlinx.coroutines.launch
 fun Mascotas(navController: NavController) {
     val context = LocalContext.current
     val sharedPref = remember { context.getSharedPreferences("user_session", Context.MODE_PRIVATE) }
-    val userId by remember { mutableStateOf(sharedPref.getString("user_id", "") ?: "") }
+    val userId = remember { sharedPref.getString("user_id", "") ?: "" }
     val userName by remember { mutableStateOf(sharedPref.getString("user_name", "Usuario") ?: "Usuario") }
     var searchText by remember { mutableStateOf("") }
-    var showAddPetDialog by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(true) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     // Estado para las mascotas del usuario
@@ -75,9 +74,9 @@ fun Mascotas(navController: NavController) {
     val petsRepository = remember { PetsRepository() }
 
     // Cargar mascotas al iniciar
-    LaunchedEffect(userId) {
+    LaunchedEffect( true) {
         if (userId.isNotEmpty()) {
-            scope.launch {
+            isLoading = true
                 val result = petsRepository.loadPets(userId)
                 result.onSuccess { pets ->
                     userPets.clear()
@@ -88,8 +87,6 @@ fun Mascotas(navController: NavController) {
                     errorMessage = it.message
                     isLoading = false
                 }
-
-            }
         }
     }
 

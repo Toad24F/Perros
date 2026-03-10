@@ -85,56 +85,6 @@ fun PetProfileScreen(petId: String, navController: NavController1) {
         val data: List<Pet>
     )
 
-    // Función para cargar los datos de la mascota
-//    fun loadPetData() {
-//        scope.launch {
-//            try {
-//                isLoading = true
-//                errorMessage = null
-//
-//                if (petId == null) {
-//                    errorMessage = "ID de mascota no válido"
-//                    isLoading = false
-//                    return@launch
-//                }
-//
-//                val client = HttpClient(Android) {
-//                    install(ContentNegotiation) {
-//                        json(Json {
-//                            ignoreUnknownKeys = true  // Esto permite ignorar campos extraños
-//                            isLenient = true
-//                        })
-//                    }
-//                }
-//
-//                val response = client.get("http://192.168.137.1:5000/api/v1/mascotas/$petId") {
-//                    contentType(ContentType.Application.Json)
-//                }
-//
-//                when (response.status) {
-//                    HttpStatusCode.OK -> {
-//                        val apiResponse = response.body<PetDetailResponse>()
-//                        if (apiResponse.data.isNotEmpty()) {
-//                            // Mapeamos a los campos que necesitas mostrar
-//                            pet.value = apiResponse.data[0]
-//                        } else {
-//                            errorMessage = "No se encontraron datos"
-//                        }
-//                    }
-//
-//                    else -> {
-//                        errorMessage = "Error: ${response.status}"
-//                    }
-//                }
-//            } catch (e: Exception) {
-//                errorMessage = "Error al cargar: ${e.message}"
-//                Log.e("PetProfile", "Error", e)
-//            } finally {
-//                isLoading = false
-//            }
-//        }
-//    }
-
     // Cargar datos al iniciar o cuando cambia el ID
     LaunchedEffect(petId) {
         scope.launch {
