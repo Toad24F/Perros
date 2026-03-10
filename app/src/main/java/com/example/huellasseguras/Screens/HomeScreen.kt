@@ -29,7 +29,6 @@ fun HomeScreen(navController: NavController) {
     val tabs = listOf(
         TabItem("Mapa", R.drawable.ic_map),
         TabItem("Mascotas", R.drawable.ic_pets),
-        TabItem("Comunidad", R.drawable.ic_community),
         TabItem("Perfil", R.drawable.ic_profile),
     )
     var selectedTab by remember { mutableIntStateOf(1) }
@@ -64,8 +63,7 @@ fun HomeScreen(navController: NavController) {
             when (selectedTab) {
                 0 -> MapScreen()
                 1 -> Mascotas(navController)
-                2 -> Text("Proximamente")
-                3 -> ProfileScreen(navController)
+                2 -> ProfileScreen(navController)
             }
         }
     }

@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -35,10 +36,13 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import coil.compose.AsyncImage
 import com.example.huellasseguras.R
 import com.example.huellasseguras.data.PetsRepository
 import com.example.huellasseguras.model.Pet
@@ -271,13 +275,26 @@ fun PetMapItem(pet: PetLocation, isSelected: Boolean, onClick: () -> Unit) {
                 "gato" -> R.drawable.ic_cat
                 else -> R.drawable.ic_pet
             }
-
-            Icon(
-                painter = painterResource(id = iconRes),
-                contentDescription = pet.tipo,
-                modifier = Modifier.size(40.dp)
-            )
-
+            // Lógica para decidir si mostrar FOTO o ICONO
+            if (!pet.foto_url.isNullOrBlank()) {
+                AsyncImage(
+                    model = pet.foto_url,
+                    contentDescription = pet.nombre,
+                    modifier = Modifier
+                        .size(56.dp)
+                        .clip(CircleShape),
+                    contentScale = ContentScale.Crop
+                )
+            } else {
+                Icon(
+                    painter = painterResource(id = iconRes),
+                    contentDescription = pet.nombre,
+                    modifier = Modifier
+                        .size(56.dp)
+                        .clip(CircleShape),
+                    tint = MaterialTheme.colorScheme.onSecondaryContainer
+                )
+            }
             Spacer(modifier = Modifier.width(16.dp))
 
             Column {

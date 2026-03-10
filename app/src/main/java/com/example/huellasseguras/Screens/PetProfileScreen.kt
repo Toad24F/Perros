@@ -40,10 +40,12 @@ import androidx.compose.material3.Divider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import coil.compose.AsyncImage
 import com.example.huellasseguras.R
 import com.example.huellasseguras.data.PetsRepository
 import com.example.huellasseguras.model.Pet
@@ -68,7 +70,7 @@ fun PetProfileScreen(petId: String, navController: NavController1) {
     )
 
     val pet1 = remember { mutableStateOf<Pet?>(null) }
-    var pet by remember { mutableStateOf<Pet?>(null) }
+    var currentPet by remember { mutableStateOf<Pet?>(null) }
     var isLoading by remember { mutableStateOf(true) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
@@ -138,7 +140,7 @@ fun PetProfileScreen(petId: String, navController: NavController1) {
         scope.launch {
             val result = petsRepository.loadPetData(petId)
             result.onSuccess { petData ->
-                pet = petData
+                currentPet = petData
                 isLoading = false
             }.onFailure { error ->
                 errorMessage = "No se pudo cargar la información: ${error.message}"
@@ -184,7 +186,7 @@ fun PetProfileScreen(petId: String, navController: NavController1) {
                         Button(onClick = { scope.launch {
                             val result = petsRepository.loadPetData(petId)
                             result.onSuccess { petData ->
-                                pet = petData
+                                currentPet = petData
                                 isLoading = false
                             }.onFailure { error ->
                                 errorMessage = "No se pudo cargar la información: ${error.message}"
@@ -197,8 +199,8 @@ fun PetProfileScreen(petId: String, navController: NavController1) {
                     }
                 }
 
-                pet != null -> {
-                    val currentPet = pet
+                currentPet != null -> {
+                    val currentPet = currentPet
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
@@ -224,12 +226,22 @@ fun PetProfileScreen(petId: String, navController: NavController1) {
                                 .background(MaterialTheme.colorScheme.primaryContainer),
                             contentAlignment = Alignment.Center
                         ) {
-                            Icon(
-                                painter = painterResource(id = iconRes),
-                                contentDescription = "Tipo ${currentPet?.tipo}",
-                                modifier = Modifier.size(80.dp),
-                                tint = MaterialTheme.colorScheme.onPrimaryContainer
-                            )
+                            // Lógica para decidir si mostrar FOTO o ICONO
+                            if (!currentPet?.foto_url.isNullOrBlank()) {
+                                AsyncImage(
+                                    model = currentPet.foto_url,
+                                    contentDescription = currentPet.nombre,
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentScale = ContentScale.Crop
+                                )
+                            } else {
+                                Icon(
+                                    painter = painterResource(id = iconRes),
+                                    contentDescription = currentPet?.nombre,
+                                    modifier = Modifier.size(40.dp),
+                                    tint = MaterialTheme.colorScheme.onSecondaryContainer
+                                )
+                            }
                         }
 
                         Spacer(modifier = Modifier.height(24.dp))
@@ -242,13 +254,6 @@ fun PetProfileScreen(petId: String, navController: NavController1) {
                         )
 
                         Spacer(modifier = Modifier.height(8.dp))
-
-                        // Tipo
-                        Text(
-                            text = currentPet?.tipo ?:"Tipo de mascota",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-                        )
 
                         Spacer(modifier = Modifier.height(24.dp))
 
@@ -277,7 +282,42 @@ fun PetProfileScreen(petId: String, navController: NavController1) {
                                     Divider()
 
                                     Spacer(modifier = Modifier.height(8.dp))
-
+                                    // Tipo de mascota
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(vertical = 4.dp),
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Text(
+                                            text = "Tipo de mascota",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                                        )
+                                        Text(
+                                            text = currentPet?.tipo ?: "N/A",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            fontWeight = FontWeight.Medium
+                                        )
+                                    }
+                                    // Sexo
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(vertical = 4.dp),
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Text(
+                                            text = "Sexo",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                                        )
+                                        Text(
+                                            text = currentPet?.sexo?.toString() ?: "N/A",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            fontWeight = FontWeight.Medium
+                                        )
+                                    }
                                     // Edad
                                     Row(
                                         modifier = Modifier
@@ -291,7 +331,8 @@ fun PetProfileScreen(petId: String, navController: NavController1) {
                                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                                         )
                                         Text(
-                                            text = currentPet?.edad?.toString() ?: "N/A",
+                                            text = (currentPet?.edad?.toString() + " Años")
+                                                ?: "N/A",
                                             style = MaterialTheme.typography.bodyMedium,
                                             fontWeight = FontWeight.Medium
                                         )

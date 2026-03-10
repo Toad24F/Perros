@@ -47,7 +47,7 @@ class PetsRepository {
             val response = Supabase.client
                 .from("mascotas")
                 .select(
-                    columns = Columns.raw("id, nombre, tipo, ubicaciones!inner(lat, lng)")
+                    columns = Columns.raw("id, nombre, tipo, foto_url, ubicaciones!inner(lat, lng)")
                 ) {
                     filter {
                         eq("user_id", userId)
@@ -63,7 +63,8 @@ class PetsRepository {
                     nombre = raw.nombre,
                     tipo = raw.tipo,
                     lat = ultimaPos?.lat ?: 0.0,
-                    lng = ultimaPos?.lng ?: 0.0
+                    lng = ultimaPos?.lng ?: 0.0,
+                    foto_url = raw.foto_url
                 )
             }
 

@@ -65,6 +65,7 @@ fun AddPetScreen(navController: NavController, userId: String) {
     val petsRepository = remember { PetsRepository() }
     // Estados del formulario
     var nombre by remember { mutableStateOf("") }
+    var sexo by remember { mutableStateOf("") }
     var edad by remember { mutableStateOf("") }
     var peso by remember { mutableStateOf("") }
     var tipoSeleccionado by remember { mutableStateOf("") }
@@ -128,7 +129,8 @@ fun AddPetScreen(navController: NavController, userId: String) {
                     Icon(
                         painter = painterResource(id = com.example.huellasseguras.R.drawable.ic_add),
                         contentDescription = "Añadir foto",
-                        modifier = Modifier.size(40.dp)
+                        modifier = Modifier.size(60.dp),
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer
                     )
                 }
             }
@@ -207,7 +209,44 @@ fun AddPetScreen(navController: NavController, userId: String) {
                     }
                 }
             }
+            var expanded by remember { mutableStateOf(false) }
 
+            val opcionesSexo = listOf("Macho", "Hembra")
+
+            ExposedDropdownMenuBox(
+                expanded = expanded,
+                onExpandedChange = { expanded = !expanded }
+            ) {
+
+                OutlinedTextField(
+                    value = sexo,
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text("Sexo") },
+                    trailingIcon = {
+                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
+                    },
+                    modifier = Modifier
+                        .menuAnchor()
+                        .fillMaxWidth()
+                )
+
+                ExposedDropdownMenu(
+                    expanded = expanded,
+                    onDismissRequest = { expanded = false }
+                ) {
+
+                    opcionesSexo.forEach { opcion ->
+                        DropdownMenuItem(
+                            text = { Text(opcion) },
+                            onClick = {
+                                sexo = opcion
+                                expanded = false
+                            }
+                        )
+                    }
+                }
+            }
             // Campos adicionales (Edad y Peso)
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(
@@ -240,7 +279,8 @@ fun AddPetScreen(navController: NavController, userId: String) {
                             raza = razaSeleccionada,
                             edad = edad.toIntOrNull() ?: 0,
                             peso = peso.toFloatOrNull() ?: 0f,
-                            user_id = userId
+                            user_id = userId,
+                            sexo = sexo
                         )
 
                         // 2. Guardar en la base de datos
@@ -250,7 +290,6 @@ fun AddPetScreen(navController: NavController, userId: String) {
                             // 3. Si hay foto, subirla usando el ID de la mascota creada
                             if (imageUri != null) {
                                 val uploadResult = petsRepository.uploadPetPhoto(createdPet.id, imageUri!!, context)
-
                                 uploadResult.onSuccess { photoUrl ->
                                     // 4. Actualizar la mascota con su nueva URL de foto
                                     petsRepository.updatePetPhotoUrl(createdPet.id, photoUrl)

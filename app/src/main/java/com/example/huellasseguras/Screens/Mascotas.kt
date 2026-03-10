@@ -44,6 +44,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -51,6 +52,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import coil.compose.AsyncImage
 import com.example.huellasseguras.R
 import com.example.huellasseguras.data.PetsRepository
 import com.example.huellasseguras.model.NewPet
@@ -218,12 +220,22 @@ fun PetItem(pet: Pet, onClick: () -> Unit) {
                 .background(MaterialTheme.colorScheme.secondaryContainer),
             contentAlignment = Alignment.Center
         ) {
-            Icon(
-                painter = painterResource(id = iconRes),
-                contentDescription = pet.nombre,
-                modifier = Modifier.size(40.dp),
-                tint = MaterialTheme.colorScheme.onSecondaryContainer
-            )
+            // Lógica para decidir si mostrar FOTO o ICONO
+            if (!pet.foto_url.isNullOrBlank()) {
+                AsyncImage(
+                    model = pet.foto_url,
+                    contentDescription = pet.nombre,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
+                )
+            } else {
+                Icon(
+                    painter = painterResource(id = iconRes),
+                    contentDescription = pet.nombre,
+                    modifier = Modifier.size(40.dp),
+                    tint = MaterialTheme.colorScheme.onSecondaryContainer
+                )
+            }
         }
         Spacer(modifier = Modifier.height(8.dp))
         Text(

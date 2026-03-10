@@ -8,7 +8,8 @@ data class NewPet(
     val raza: String? = null,
     val edad: Int?,
     val peso: Float?,
-    val user_id: String
+    val user_id: String,
+    val sexo: String
 )
 @Serializable
 data class Pet(
@@ -19,7 +20,8 @@ data class Pet(
     val edad: Int?,
     val peso: Float?,
     val user_id: String,
-    val foto_url: String? = null
+    val foto_url: String? = null,
+    val sexo: String
 )
 
 @Serializable
@@ -36,6 +38,7 @@ data class PetLocationRaw(
     val id: String,
     val nombre: String,
     val tipo: String,
+    val foto_url: String? = null,
     val ubicaciones: List<Ubicacion>
 )
 @Serializable
