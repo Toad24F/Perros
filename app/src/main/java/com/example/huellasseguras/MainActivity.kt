@@ -40,6 +40,7 @@ import io.github.jan.supabase.auth.auth
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
+        Supabase.client
         super.onCreate(savedInstanceState)
         setContent {
             PerrosTheme {
@@ -56,7 +57,7 @@ class MainActivity : ComponentActivity() {
 // --- Navegación entre pantallas ---
 @Composable
 public fun AppNavigation() {
-    Supabase.client
+
     val context = LocalContext.current
     PermissionHandler()
     val navController = rememberNavController()

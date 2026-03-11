@@ -7,7 +7,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
+import androidx.compose.material3.Icon
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.CircularProgressIndicator
@@ -38,10 +38,12 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.Divider
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.draw.clip
@@ -69,7 +71,7 @@ fun PetProfileScreen(petId: String, navController: NavController1) {
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     val petsRepository = remember { PetsRepository() }
-    var imageUri by remember { mutableStateOf<Uri?>(null) }
+    var isBleConnected by remember { mutableStateOf(false) }
 
     // Launcher para seleccionar la imagen
     val galleryLauncher = rememberLauncherForActivityResult(
@@ -120,7 +122,7 @@ fun PetProfileScreen(petId: String, navController: NavController1) {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.Default.ArrowBack, "Regresar")
                     }
-                }
+                },
             )
         }
     ) { paddingValues ->
@@ -131,7 +133,7 @@ fun PetProfileScreen(petId: String, navController: NavController1) {
         ) {
             when {
                 isLoading -> {
-                    CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                    LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
                 }
 
                 errorMessage != null -> {
