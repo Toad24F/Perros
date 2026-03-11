@@ -3,7 +3,7 @@ package com.example.huellasseguras.ui.theme
 import androidx.compose.ui.graphics.Color
 
 val Negro = Color(0xFF070303)
-val PurpleGrey80 = Color(0xFFCCC2DC)
+val PurpleGrey80 = Color(0xFFCFC1E5)
 val Pink80 = Color(0xFFEFB8C8)
 
 val Blanco = Color(0xFFFFFFFF)

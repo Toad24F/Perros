@@ -220,7 +220,7 @@ fun PetItem(pet: Pet, onClick: () -> Unit) {
             // Lógica para decidir si mostrar FOTO o ICONO
             if (!pet.foto_url.isNullOrBlank()) {
                 AsyncImage(
-                    model = pet.foto_url,
+                    model = "${pet.foto_url}?t=${System.currentTimeMillis()}",
                     contentDescription = pet.nombre,
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop

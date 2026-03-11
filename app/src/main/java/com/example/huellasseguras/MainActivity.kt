@@ -56,11 +56,10 @@ class MainActivity : ComponentActivity() {
 // --- Navegación entre pantallas ---
 @Composable
 public fun AppNavigation() {
-    Supabase.client.auth.sessionStatus
+    Supabase.client
     val context = LocalContext.current
     PermissionHandler()
     val navController = rememberNavController()
-    //CheckAuthScreen(navController)
     val sharedPref = context.getSharedPreferences("user_session", Context.MODE_PRIVATE)
     val userName = sharedPref.getString("user_name", null)
     val userEmail = sharedPref.getString("user_email", null)

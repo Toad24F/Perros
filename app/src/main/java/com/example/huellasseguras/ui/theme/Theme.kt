@@ -9,17 +9,22 @@ import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
+import com.example.huellasseguras.ui.theme.PurpleGrey80
 
 private val DarkColorScheme = darkColorScheme(
     primary = Negro,
     secondary = PurpleGrey80,
-    tertiary = Pink80
+    tertiary = Pink80,
+    background = PurpleGrey80,
+    surface = Negro
 )
 
 private val LightColorScheme = lightColorScheme(
     primary = Blanco,
     secondary = PurpleGrey40,
-    tertiary = Pink40
+    tertiary = Pink40 ,
+    background = PurpleGrey80,
+    surface = Negro
 
     /* Other default colors to override
     background = Color(0xFFFFFBFE),

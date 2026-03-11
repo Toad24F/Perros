@@ -106,7 +106,6 @@ class PetsRepository {
             bucket.upload(path = fileName, data = bytes) {
                 upsert = true
             }
-
             val url = bucket.publicUrl(fileName)
             Result.success(url)
         } catch (e: Exception) {

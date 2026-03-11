@@ -1,5 +1,8 @@
 package com.example.huellasseguras.Screens
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -24,6 +27,7 @@ import androidx.compose.ui.Modifier
 import androidx.navigation.NavController as NavController1
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -34,12 +38,14 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.Divider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -55,19 +61,6 @@ import kotlinx.serialization.Serializable
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PetProfileScreen(petId: String, navController: NavController1) {
-    @Serializable
-    data class PetDetail(
-        val id: String,
-        val nombre: String,
-        val edad: Int?,
-        val raza: String?,
-        val peso: String?,
-        val tipo: String,
-        val user_id: String,
-        val created_at: String?,
-        val updated_at: String?
-        // Solo incluye los campos que realmente devuelve tu API
-    )
 
     val pet1 = remember { mutableStateOf<Pet?>(null) }
     var currentPet by remember { mutableStateOf<Pet?>(null) }
@@ -76,14 +69,32 @@ fun PetProfileScreen(petId: String, navController: NavController1) {
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     val petsRepository = remember { PetsRepository() }
+    var imageUri by remember { mutableStateOf<Uri?>(null) }
 
-
-    // Modelo para la respuesta de la API
-    @Serializable
-    data class PetDetailResponse(
-        val message: String,
-        val data: List<Pet>
-    )
+    // Launcher para seleccionar la imagen
+    val galleryLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let { selectedUri ->
+            scope.launch {
+                // 3. Si hay foto, subirla usando el ID de la mascota creada
+                if (currentPet != null) {
+                    isLoading = true
+                    val uploadResult = petsRepository.uploadPetPhoto(currentPet!!.id,
+                        selectedUri, context)
+                    uploadResult.onSuccess { photoUrl ->
+                        // 4. Actualizar la mascota con su nueva URL de foto
+                        petsRepository.updatePetPhotoUrl(currentPet!!.id, photoUrl)
+                        currentPet = currentPet?.copy(foto_url = photoUrl)
+                        isLoading = false
+                    }.onFailure {
+                        errorMessage = "Error al subir la imagen"
+                        isLoading = false
+                    }
+                }
+            }
+        }
+    }
 
     // Cargar datos al iniciar o cuando cambia el ID
     LaunchedEffect(petId) {
@@ -167,19 +178,19 @@ fun PetProfileScreen(petId: String, navController: NavController1) {
                             "reptil" -> R.drawable.ic_reptile
                             else -> R.drawable.ic_pet
                         }
-
                         // Foto/icono de la mascota
                         Box(
                             modifier = Modifier
                                 .size(120.dp)
                                 .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.primaryContainer),
-                            contentAlignment = Alignment.Center
+                                .background(MaterialTheme.colorScheme.secondaryContainer)
+                                .clickable { galleryLauncher.launch("image/*") },
+                                contentAlignment = Alignment.Center
                         ) {
                             // Lógica para decidir si mostrar FOTO o ICONO
                             if (!currentPet?.foto_url.isNullOrBlank()) {
                                 AsyncImage(
-                                    model = currentPet.foto_url,
+                                    model = "${currentPet.foto_url}?t=${System.currentTimeMillis()}",
                                     contentDescription = currentPet.nombre,
                                     modifier = Modifier.fillMaxSize(),
                                     contentScale = ContentScale.Crop
@@ -192,10 +203,24 @@ fun PetProfileScreen(petId: String, navController: NavController1) {
                                     tint = MaterialTheme.colorScheme.onSecondaryContainer
                                 )
                             }
+                            Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .background(Color.Black.copy(alpha = 0.2f)),
+                            contentAlignment = Alignment.BottomCenter
+                            ) {
+                            Icon(
+                                imageVector = Icons.Default.Edit,
+                                contentDescription = "Cambiar foto",
+                                tint = Color.White,
+                                modifier = Modifier.padding(bottom = 8.dp).size(20.dp)
+                            )
+                        }
                         }
 
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text("Toca para Cambiar la foto", style = MaterialTheme.typography.labelMedium)
                         Spacer(modifier = Modifier.height(24.dp))
-
                         // Nombre
                         Text(
                             text = currentPet?.nombre?: "Mascota",
