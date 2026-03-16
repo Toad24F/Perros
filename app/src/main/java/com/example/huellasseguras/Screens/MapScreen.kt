@@ -126,7 +126,7 @@ fun MapScreen() {
             }
 
             isLoading = false
-            delay(20000) // Espera 20 segundos antes de la siguiente actualización
+            delay(5000) // Espera 5 segundos antes de la siguiente actualización
         }
     }
 
@@ -282,7 +282,7 @@ fun PetMapItem(pet: PetLocation, isSelected: Boolean, onClick: () -> Unit) {
             // Lógica para decidir si mostrar FOTO o ICONO
             if (!pet.foto_url.isNullOrBlank()) {
                 AsyncImage(
-                    model = "${pet.foto_url}?t=${System.currentTimeMillis()}",
+                    model = "${pet.foto_url}?",
                     contentDescription = pet.nombre,
                     modifier = Modifier
                         .size(56.dp)

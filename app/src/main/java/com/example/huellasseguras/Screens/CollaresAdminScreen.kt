@@ -26,12 +26,14 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -40,10 +42,12 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Build
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.setValue
@@ -54,15 +58,21 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import com.example.huellasseguras.Bluetooth.BluetoothManager
 import com.example.huellasseguras.R
 import com.example.huellasseguras.data.PetsRepository
 import com.example.huellasseguras.model.Pet
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalPermissionsApi::class)
 @Composable
 fun CollaresAdminScreen(navController: NavController) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+
+    var showDeviceDialog by remember { mutableStateOf(false) }
+    var selectedPetForLinking by remember { mutableStateOf<Pet?>(null) }
 
     // Estados de la UI
     var isScanning by remember { mutableStateOf(false) }
@@ -74,6 +84,8 @@ fun CollaresAdminScreen(navController: NavController) {
     val petsRepository = remember { PetsRepository() }
     val sharedPref = remember { context.getSharedPreferences("user_session", Context.MODE_PRIVATE) }
     val userId = sharedPref.getString("user_id", "") ?: ""
+    val bleManager = remember { BluetoothManager(context) }
+    val dispositivos = bleManager.dispositivosEncontrados
 
     LaunchedEffect(Unit) {
         val result = petsRepository.loadPets(userId) // Asumiendo que tienes esta función en el repo
@@ -81,6 +93,17 @@ fun CollaresAdminScreen(navController: NavController) {
             mascotas.clear()
             mascotas.addAll(it)
             isLoadingMascotas = false
+        }
+    }
+    // Control del Escaneo
+    LaunchedEffect(isScanning) {
+        if (isScanning) {
+            bleManager.startScanning()
+            delay(10000)
+            isScanning = false
+            bleManager.stopScanning()
+        } else {
+            bleManager.stopScanning()
         }
     }
 
@@ -157,12 +180,64 @@ fun CollaresAdminScreen(navController: NavController) {
                     pet = pet,
                     isScanning = isScanning,
                     onLinkClick = {
-                        // Aquí irá la lógica para conectar con el ESP32
+                        // 👈 ACTUALIZADO: Guardamos la mascota y abrimos el diálogo
+                        selectedPetForLinking = pet
+                        showDeviceDialog = true
+                        isScanning = true
                     }
                 )
             }
 
             item { Spacer(modifier = Modifier.height(20.dp)) }
+        }
+        if (showDeviceDialog) {
+            AlertDialog(
+                onDismissRequest = { showDeviceDialog = false },
+                title = { Text("Selecciona el Collar para ${selectedPetForLinking?.nombre}") },
+                text = {
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        if (dispositivos.isEmpty()) {
+                            Text("Buscando collares cercanos...", style = MaterialTheme.typography.bodySmall)
+                            LinearProgressIndicator(modifier = Modifier.fillMaxWidth().padding(top = 8.dp))
+                        } else {
+                            LazyColumn(modifier = Modifier.heightIn(max = 300.dp)) {
+                                items(dispositivos) { dispositivo ->
+                                    Text(
+                                        text = dispositivo.name ?: "Collar Desconocido",
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clickable {
+                                                // PRÓXIMO PASO: Vincular selectedPetForLinking con este dispositivo
+                                                val petId = selectedPetForLinking?.id ?: ""
+
+                                                // Llamamos a la conexión
+                                                bleManager.conectarYEnviarId(dispositivo.address, petId) { success ->
+                                                    scope.launch {
+                                                        if (success) {
+                                                            // Aquí podrías mostrar un aviso de "Vinculado con éxito"
+                                                            showDeviceDialog = false
+                                                        } else {
+                                                            // Aviso de error
+                                                        }
+                                                    }
+                                                }
+                                                showDeviceDialog = false
+                                                isScanning = false
+                                            }
+                                            .padding(16.dp),
+                                        style = MaterialTheme.typography.bodyLarge
+                                    )
+                                }
+                            }
+                        }
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = { showDeviceDialog = false }) {
+                        Text("Cancelar")
+                    }
+                }
+            )
         }
     }
 }
