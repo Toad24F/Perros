@@ -8,6 +8,7 @@ import com.example.huellasseguras.model.Pet
 import com.example.huellasseguras.model.PetLocation
 import com.example.huellasseguras.model.PetLocationRaw
 
+
 import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.query.Columns
 import io.github.jan.supabase.storage.storage
@@ -43,6 +44,7 @@ class PetsRepository {
         }
     //funcion para cargar la ubicacion de las mascotas
     suspend fun loadPetsLocation(userId: String): Result<List<PetLocation>> {
+        Supabase.client
         return try {
             val response = Supabase.client
                 .from("mascotas")

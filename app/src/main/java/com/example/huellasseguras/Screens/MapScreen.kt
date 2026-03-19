@@ -2,6 +2,7 @@ package com.example.huellasseguras.Screens
 
 import android.Manifest
 import android.content.Context
+import android.graphics.Bitmap
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -21,7 +22,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
@@ -39,21 +39,27 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.core.graphics.drawable.toBitmap
+import coil.ImageLoader
 import coil.compose.AsyncImage
+import coil.request.ImageRequest
+import coil.request.SuccessResult
 import com.example.huellasseguras.R
 import com.example.huellasseguras.data.PetsRepository
-import com.example.huellasseguras.model.Pet
 import com.example.huellasseguras.model.PetLocation
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.maps.CameraUpdateFactory
+import com.google.android.gms.maps.model.BitmapDescriptor
+import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.MapStyleOptions
 import com.google.maps.android.compose.GoogleMap
@@ -62,16 +68,11 @@ import com.google.maps.android.compose.MapUiSettings
 import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.rememberCameraPositionState
-import io.ktor.client.HttpClient
-import io.ktor.client.call.body
-import io.ktor.client.engine.android.Android
-import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
-import io.ktor.client.request.get
-import io.ktor.serialization.kotlinx.json.json
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.Json
+import kotlinx.coroutines.withContext
+import androidx.core.graphics.toColorInt
 
 
 @OptIn(ExperimentalPermissionsApi::class)
@@ -195,15 +196,27 @@ fun MapScreen() {
                     // Marcadores de mascotas con ventana de información (nombre visible)
                     userPetLocation.forEach { pet ->
                         val position = LatLng(pet.lat.toDouble(), pet.lng.toDouble())
-                        Marker(
-                            state = MarkerState(position = position),
-                            title = pet.nombre,
-                            snippet = "Tipo: ${pet.tipo}",
-                            onClick = {
-                                selectedPet = pet
-                                false // ← muestra automáticamente el InfoWindow
-                            }
+                        val icon = rememberPetMarkerIcon(
+                            context = context,
+                            photoUrl = pet.foto_url,
+                            borderColor = "#FF8CE2".toColorInt(), // ← cambia aquí
+                            anchorColor = "#FF8CE2".toColorInt(),
                         )
+
+                        // Solo renderiza cuando el ícono ya está listo
+                        icon?.let {
+                            Marker(
+                                state = MarkerState(position = position),
+                                title = pet.nombre,
+                                snippet = "Tipo: ${pet.tipo}",
+                                icon = it,
+                                anchor = Offset(0.5f, 1f),
+                                onClick = {
+                                    selectedPet = pet
+                                    false
+                                }
+                            )
+                        }
                     }
                 }
 
@@ -253,6 +266,101 @@ fun MapScreen() {
             }
         }
     }
+}
+@Composable
+fun rememberPetMarkerIcon(
+    context: Context,
+    photoUrl: String?,
+    circleSize: Int =150,        // px
+    borderColor: Int = android.graphics.Color.parseColor("#FF6B35"),
+    anchorColor: Int = android.graphics.Color.parseColor("#FF6B35"),
+    borderWidth: Float = 6f,
+    stemHeight: Int = 30,
+    stemWidth: Float = 5f,
+    anchorRadius: Float = 15f,
+): BitmapDescriptor? {
+    var descriptor by remember(photoUrl) { mutableStateOf<BitmapDescriptor?>(null) }
+
+    LaunchedEffect(photoUrl) {
+        withContext(Dispatchers.IO) {
+            try {
+                // Descargar imagen con Coil
+                val request = ImageRequest.Builder(context)
+                    .data("$photoUrl?t=${System.currentTimeMillis()}")
+                    .size(circleSize, circleSize)
+                    .allowHardware(false)
+                    .build()
+                val result = ImageLoader(context).execute(request)
+                val photoBitmap = (result as? SuccessResult)?.drawable?.toBitmap(
+                    circleSize, circleSize, Bitmap.Config.ARGB_8888
+                ) ?: return@withContext
+
+                // Crear canvas total
+                val totalHeight = circleSize + stemHeight + (anchorRadius * 2).toInt()
+                val output = Bitmap.createBitmap(circleSize, totalHeight, Bitmap.Config.ARGB_8888)
+                val canvas = android.graphics.Canvas(output)
+
+                val cx = circleSize / 2f
+                val cy = circleSize / 2f
+                // Dibujar foto recortada en círculo (centrada y escalada)
+                val photoPaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
+                val shader = android.graphics.BitmapShader(
+                    photoBitmap,
+                    android.graphics.Shader.TileMode.CLAMP,
+                    android.graphics.Shader.TileMode.CLAMP
+                )
+                // Escalar y centrar el bitmap dentro del círculo (tipo ContentScale.Crop)
+                val radioUtil = circleSize / 2f - borderWidth
+                val scale = (radioUtil * 2) / minOf(photoBitmap.width, photoBitmap.height).toFloat()
+                val offsetX = (radioUtil * 2 - photoBitmap.width * scale) / 2f
+                val offsetY = (radioUtil * 2 - photoBitmap.height * scale) / 2f
+
+                val matrix = android.graphics.Matrix()
+                matrix.setScale(scale, scale)
+                matrix.postTranslate(offsetX + borderWidth, offsetY + borderWidth)
+                shader.setLocalMatrix(matrix)
+                photoPaint.shader = shader
+                canvas.drawCircle(cx, cy, radioUtil, photoPaint)
+
+                //Dibujar borde del círculo
+                val borderPaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+                    color = borderColor
+                    style = android.graphics.Paint.Style.STROKE
+                    strokeWidth = borderWidth
+                }
+                canvas.drawCircle(cx, cy, circleSize / 2f - borderWidth / 2, borderPaint)
+
+                // Dibujar tallo
+                val stemPaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+                    color = anchorColor
+                    style = android.graphics.Paint.Style.FILL
+                }
+                val stemLeft = cx - stemWidth / 2
+                canvas.drawRect(
+                    stemLeft,
+                    circleSize.toFloat(),
+                    stemLeft + stemWidth,
+                    circleSize + stemHeight.toFloat(),
+                    stemPaint
+                )
+
+                // Dibujar punto ancla
+                canvas.drawCircle(
+                    cx,
+                    circleSize + stemHeight + anchorRadius,
+                    anchorRadius,
+                    stemPaint
+                )
+
+                descriptor = BitmapDescriptorFactory.fromBitmap(output)
+
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    return descriptor
 }
 
 @Composable
