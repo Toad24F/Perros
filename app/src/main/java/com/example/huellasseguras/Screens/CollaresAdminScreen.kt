@@ -2,70 +2,72 @@ package com.example.huellasseguras.Screens
 
 import android.bluetooth.BluetoothDevice
 import android.content.Context
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.platform.LocalContext
-import androidx.navigation.NavController
-import com.google.accompanist.permissions.ExperimentalPermissionsApi
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Icon
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material3.CenterAlignedTopAppBar
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Build
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.CircularWavyProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.LinearWavyProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.example.huellasseguras.Bluetooth.BluetoothManager
 import com.example.huellasseguras.R
 import com.example.huellasseguras.data.PetsRepository
 import com.example.huellasseguras.model.Pet
+import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalPermissionsApi::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalPermissionsApi::class,
+    ExperimentalMaterial3ExpressiveApi::class
+)
 @Composable
 fun CollaresAdminScreen(navController: NavController) {
     val context = LocalContext.current
@@ -111,11 +113,6 @@ fun CollaresAdminScreen(navController: NavController) {
         topBar = {
             CenterAlignedTopAppBar(
                 title = { Text("Administrar Collares", fontWeight = FontWeight.Bold) },
-                navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Atrás")
-                    }
-                },
                 actions = {
                     // Botón para refrescar/escanear
                     IconButton(onClick = { isScanning = !isScanning }) {
@@ -134,7 +131,7 @@ fun CollaresAdminScreen(navController: NavController) {
                 .fillMaxSize()
                 .padding(padding)
                 .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            verticalArrangement = Arrangement.spacedBy(15.dp)
         ) {
             // --- SECCIÓN 1: ESTADO DEL ESCANER ---
             item {
@@ -157,7 +154,7 @@ fun CollaresAdminScreen(navController: NavController) {
                                 painter = painterResource(id = R.drawable.ic_bluetooth), // Solución aquí
                                 contentDescription = null,
                                 modifier = Modifier.size(24.dp),
-                                tint = Color.Unspecified // 👈 Esto evita que Compose aplique un tint
+                                tint = Color.Unspecified //
                             )
                             Spacer(Modifier.width(12.dp))
                             Text("Escáner detenido")
@@ -172,7 +169,7 @@ fun CollaresAdminScreen(navController: NavController) {
             }
 
             if (isLoadingMascotas) {
-                item { LinearProgressIndicator(modifier = Modifier.fillMaxWidth()) }
+                item { LinearWavyProgressIndicator(modifier = Modifier.fillMaxWidth()) }
             }
 
             items(mascotas) { pet ->
@@ -243,6 +240,7 @@ fun CollaresAdminScreen(navController: NavController) {
 }
 
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun CollarPetCard(pet: Pet, isScanning: Boolean, onLinkClick: () -> Unit) {
     Card(
@@ -255,6 +253,7 @@ fun CollarPetCard(pet: Pet, isScanning: Boolean, onLinkClick: () -> Unit) {
         ) {
             // Foto de la mascota (usando tu lógica de Coil)
             Box(modifier = Modifier.size(60.dp).clip(CircleShape).background(Color.LightGray)) {
+                CircularWavyProgressIndicator()
                 AsyncImage(
                     model = pet.foto_url,
                     contentDescription = null,
@@ -262,6 +261,7 @@ fun CollarPetCard(pet: Pet, isScanning: Boolean, onLinkClick: () -> Unit) {
                     contentScale = ContentScale.Crop,
                     error = painterResource(R.drawable.ic_dog) // Icono por defecto
                 )
+
             }
 
             Column(modifier = Modifier.weight(1f).padding(horizontal = 12.dp)) {

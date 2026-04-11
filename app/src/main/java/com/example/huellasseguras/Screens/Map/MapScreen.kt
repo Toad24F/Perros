@@ -1,8 +1,14 @@
-package com.example.huellasseguras.Screens
+package com.example.huellasseguras.Screens.Map
 
 import android.Manifest
 import android.content.Context
 import android.graphics.Bitmap
+import android.graphics.BitmapShader
+import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.Matrix
+import android.graphics.Paint
+import android.graphics.Shader
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -22,9 +28,12 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.CircularWavyProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -89,7 +98,9 @@ fun PermissionHandler() {
     }
 }
 
-@OptIn(ExperimentalPermissionsApi::class, ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalPermissionsApi::class, ExperimentalMaterial3Api::class,
+    ExperimentalMaterial3ExpressiveApi::class
+)
 @Composable
 fun MapScreen() {
     val context = LocalContext.current
@@ -225,8 +236,8 @@ fun MapScreen() {
             // Lista de mascotas (30% de la pantalla)
             Box(modifier = Modifier.weight(0.2f)) {
                 if (isLoading) {
+                    LinearWavyProgressIndicator(modifier = Modifier.fillMaxWidth())
                     Spacer(modifier = Modifier.height(20.dp))
-                    LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
 
                 } else if (errorMessage != null) {
                     Column(
@@ -267,102 +278,7 @@ fun MapScreen() {
         }
     }
 }
-@Composable
-fun rememberPetMarkerIcon(
-    context: Context,
-    photoUrl: String?,
-    circleSize: Int =150,        // px
-    borderColor: Int = android.graphics.Color.parseColor("#FF6B35"),
-    anchorColor: Int = android.graphics.Color.parseColor("#FF6B35"),
-    borderWidth: Float = 6f,
-    stemHeight: Int = 30,
-    stemWidth: Float = 5f,
-    anchorRadius: Float = 15f,
-): BitmapDescriptor? {
-    var descriptor by remember(photoUrl) { mutableStateOf<BitmapDescriptor?>(null) }
-
-    LaunchedEffect(photoUrl) {
-        withContext(Dispatchers.IO) {
-            try {
-                // Descargar imagen con Coil
-                val request = ImageRequest.Builder(context)
-                    .data("$photoUrl?t=${System.currentTimeMillis()}")
-                    .size(circleSize, circleSize)
-                    .allowHardware(false)
-                    .build()
-                val result = ImageLoader(context).execute(request)
-                val photoBitmap = (result as? SuccessResult)?.drawable?.toBitmap(
-                    circleSize, circleSize, Bitmap.Config.ARGB_8888
-                ) ?: return@withContext
-
-                // Crear canvas total
-                val totalHeight = circleSize + stemHeight + (anchorRadius * 2).toInt()
-                val output = Bitmap.createBitmap(circleSize, totalHeight, Bitmap.Config.ARGB_8888)
-                val canvas = android.graphics.Canvas(output)
-
-                val cx = circleSize / 2f
-                val cy = circleSize / 2f
-                // Dibujar foto recortada en círculo (centrada y escalada)
-                val photoPaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
-                val shader = android.graphics.BitmapShader(
-                    photoBitmap,
-                    android.graphics.Shader.TileMode.CLAMP,
-                    android.graphics.Shader.TileMode.CLAMP
-                )
-                // Escalar y centrar el bitmap dentro del círculo (tipo ContentScale.Crop)
-                val radioUtil = circleSize / 2f - borderWidth
-                val scale = (radioUtil * 2) / minOf(photoBitmap.width, photoBitmap.height).toFloat()
-                val offsetX = (radioUtil * 2 - photoBitmap.width * scale) / 2f
-                val offsetY = (radioUtil * 2 - photoBitmap.height * scale) / 2f
-
-                val matrix = android.graphics.Matrix()
-                matrix.setScale(scale, scale)
-                matrix.postTranslate(offsetX + borderWidth, offsetY + borderWidth)
-                shader.setLocalMatrix(matrix)
-                photoPaint.shader = shader
-                canvas.drawCircle(cx, cy, radioUtil, photoPaint)
-
-                //Dibujar borde del círculo
-                val borderPaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
-                    color = borderColor
-                    style = android.graphics.Paint.Style.STROKE
-                    strokeWidth = borderWidth
-                }
-                canvas.drawCircle(cx, cy, circleSize / 2f - borderWidth / 2, borderPaint)
-
-                // Dibujar tallo
-                val stemPaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
-                    color = anchorColor
-                    style = android.graphics.Paint.Style.FILL
-                }
-                val stemLeft = cx - stemWidth / 2
-                canvas.drawRect(
-                    stemLeft,
-                    circleSize.toFloat(),
-                    stemLeft + stemWidth,
-                    circleSize + stemHeight.toFloat(),
-                    stemPaint
-                )
-
-                // Dibujar punto ancla
-                canvas.drawCircle(
-                    cx,
-                    circleSize + stemHeight + anchorRadius,
-                    anchorRadius,
-                    stemPaint
-                )
-
-                descriptor = BitmapDescriptorFactory.fromBitmap(output)
-
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
-        }
-    }
-
-    return descriptor
-}
-
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun PetMapItem(pet: PetLocation, isSelected: Boolean, onClick: () -> Unit) {
     Card(

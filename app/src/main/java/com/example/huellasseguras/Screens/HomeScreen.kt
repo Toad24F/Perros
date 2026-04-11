@@ -21,6 +21,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.huellasseguras.R
+import com.example.huellasseguras.Screens.Map.MapScreen
 
 
 // --- Pantalla Principal (Home) ---

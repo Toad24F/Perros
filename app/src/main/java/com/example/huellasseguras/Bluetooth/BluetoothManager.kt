@@ -4,12 +4,12 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothGatt
+import android.bluetooth.BluetoothGattCallback
+import android.bluetooth.BluetoothGattCharacteristic
 import android.bluetooth.BluetoothProfile
 import android.bluetooth.le.ScanCallback
 import android.bluetooth.le.ScanResult
 import android.bluetooth.le.ScanSettings
-import android.bluetooth.BluetoothGattCallback
-import android.bluetooth.BluetoothGattCharacteristic
 import android.content.Context
 import androidx.annotation.RequiresPermission
 import androidx.compose.runtime.mutableStateListOf
@@ -87,7 +87,6 @@ class BluetoothManager(private val context: Context) {
             }
 
             override fun onCharacteristicWrite(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic, status: Int) {
-                // Si llegamos aquí, el mensaje se envió con éxito
                 onResult(status == BluetoothGatt.GATT_SUCCESS)
                 gatt.disconnect() // Cerramos la conexión Bluetooth para que el ESP32 empiece a trabajar
             }
