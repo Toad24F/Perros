@@ -1,29 +1,30 @@
 package com.example.huellasseguras
 
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.material3.MaterialTheme
 import android.content.Context
 import android.location.LocationManager
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.material3.*
-import androidx.compose.ui.tooling.preview.Preview
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-import androidx.navigation.compose.rememberNavController
-import com.example.huellasseguras.ui.theme.PerrosTheme
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.core.content.ContextCompat
-import androidx.navigation.navArgument
 import androidx.navigation.NavType
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
+import com.example.huellasseguras.Screens.AddMedicalRecordScreen
 import com.example.huellasseguras.Screens.AddPetScreen
 import com.example.huellasseguras.Screens.HomeScreen
 import com.example.huellasseguras.Screens.LoginScreen
@@ -31,6 +32,7 @@ import com.example.huellasseguras.Screens.Map.PermissionHandler
 import com.example.huellasseguras.Screens.PetProfileScreen
 import com.example.huellasseguras.Screens.RegisterScreen
 import com.example.huellasseguras.Supabase.Supabase
+import com.example.huellasseguras.ui.theme.PerrosTheme
 
 
 class MainActivity : ComponentActivity() {
@@ -97,6 +99,10 @@ public fun AppNavigation() {
             val sharedPref = context.getSharedPreferences("user_session", Context.MODE_PRIVATE)
             val userId = sharedPref.getString("user_id", "") ?: ""
             AddPetScreen(navController, userId)
+        }
+        composable("addMedicalRecord/{petId}") { backStackEntry ->
+            val petId = backStackEntry.arguments?.getString("petId") ?: ""
+            AddMedicalRecordScreen(petId = petId, navController = navController)
         }
         composable(
             route = "registro",

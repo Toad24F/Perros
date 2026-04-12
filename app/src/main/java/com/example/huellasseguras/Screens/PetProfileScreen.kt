@@ -1,5 +1,7 @@
 package com.example.huellasseguras.Screens
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
@@ -26,6 +28,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
@@ -39,6 +42,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -59,6 +63,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -152,6 +157,11 @@ fun PetProfileScreen(petId: String, navController: NavController1) {
     val proximoRecordatorio = recordatorios.firstOrNull()
 
     Scaffold(
+        floatingActionButton = {
+            FloatingActionButton(onClick = { navController.navigate("addMedicalRecord/$petId") }) {
+                Icon(Icons.Default.Add, "Agregar registro")
+            }
+        },
         topBar = {
             CenterAlignedTopAppBar(
                 title = { Text("Perfil de ${pet?.nombre ?: "Mascota"}") },
@@ -162,6 +172,7 @@ fun PetProfileScreen(petId: String, navController: NavController1) {
                 }
             )
         }
+
     ) { paddingValues ->
         when {
             isLoading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -565,6 +576,7 @@ fun InfoBasicCard(pet: Pet?) {
 
 @Composable
 fun MedicalRecordItem(record: MedicalRecord) {
+    val context = LocalContext.current
     val color = colorPorTipo(record.tipo_registro)
     Card(
         modifier  = Modifier.fillMaxWidth(),
@@ -607,8 +619,13 @@ fun MedicalRecordItem(record: MedicalRecord) {
                 }
             }
             if (!record.documento_url.isNullOrEmpty()) {
-                IconButton(onClick = { /* Abrir URL */ }) {
-                    Icon(painterResource(R.drawable.ic_community), "Documento", tint = color)
+                IconButton(onClick = {
+                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(record.documento_url))
+                    context.startActivity(intent)
+                }) {
+                    Icon(painterResource(R.drawable.ic_document),
+                        "Ver documento", tint = color,
+                        modifier = Modifier.size(33.dp))
                 }
             }
         }
