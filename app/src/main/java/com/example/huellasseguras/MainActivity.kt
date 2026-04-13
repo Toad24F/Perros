@@ -1,7 +1,9 @@
 package com.example.huellasseguras
 
+import android.Manifest
 import android.content.Context
 import android.location.LocationManager
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -15,6 +17,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
@@ -28,11 +31,13 @@ import com.example.huellasseguras.Screens.AddMedicalRecordScreen
 import com.example.huellasseguras.Screens.AddPetScreen
 import com.example.huellasseguras.Screens.HomeScreen
 import com.example.huellasseguras.Screens.LoginScreen
-import com.example.huellasseguras.Screens.Map.PermissionHandler
 import com.example.huellasseguras.Screens.PetProfileScreen
 import com.example.huellasseguras.Screens.RegisterScreen
 import com.example.huellasseguras.Supabase.Supabase
 import com.example.huellasseguras.ui.theme.PerrosTheme
+import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.google.accompanist.permissions.isGranted
+import com.google.accompanist.permissions.rememberPermissionState
 
 
 class MainActivity : ComponentActivity() {
@@ -52,11 +57,18 @@ class MainActivity : ComponentActivity() {
     }
 }
 // --- Navegación entre pantallas ---
+@OptIn(ExperimentalPermissionsApi::class)
 @Composable
 public fun AppNavigation() {
 
     val context = LocalContext.current
     PermissionHandler()
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        val notifPermission = rememberPermissionState(Manifest.permission.POST_NOTIFICATIONS)
+        LaunchedEffect(Unit) {
+            if (!notifPermission.status.isGranted) notifPermission.launchPermissionRequest()
+        }
+    }
     val navController = rememberNavController()
     val sharedPref = context.getSharedPreferences("user_session", Context.MODE_PRIVATE)
     val userName = sharedPref.getString("user_name", null)
@@ -153,5 +165,17 @@ public fun isLocationEnabled(context: Context): Boolean {
 fun LoginPreview() {
     PerrosTheme {
         LoginScreen(navController = rememberNavController())
+    }
+}
+@OptIn(ExperimentalPermissionsApi::class)
+@Composable
+fun PermissionHandler() {
+    val locationPermissionState = rememberPermissionState(
+        Manifest.permission.ACCESS_FINE_LOCATION
+    )
+    LaunchedEffect(Unit) {
+        if (!locationPermissionState.status.isGranted) {
+            locationPermissionState.launchPermissionRequest()
+        }
     }
 }
