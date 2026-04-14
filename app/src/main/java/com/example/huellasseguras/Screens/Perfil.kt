@@ -38,6 +38,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.huellasseguras.R
+import com.example.huellasseguras.Workers.GeofenceWorker
 import kotlinx.coroutines.launch
 
 @Composable
@@ -136,6 +137,7 @@ fun ProfileScreen(navController: NavController) {
                 TextButton(
                     onClick = {
                         scope.launch {
+                            GeofenceWorker.cancel(context)
                             // Limpiar SharedPreferences
                             sharedPref.edit().clear().apply()
                             // Redirigir al login

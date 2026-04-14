@@ -9,7 +9,7 @@ import io.github.jan.supabase.postgrest.query.Order
 
 class GeofenceRepository {
 
-    // ── Obtener geofence activo de una mascota ────────────────────────────────
+    // Obtener geofence activo de una mascota
     suspend fun getGeofence(mascotaId: String): Result<Geofence?> {
         return try {
             val result = Supabase.client.from("geofences")
@@ -26,7 +26,7 @@ class GeofenceRepository {
         }
     }
 
-    // ── Guardar o actualizar geofence ─────────────────────────────────────────
+    //  Guardar o actualizar geofence
     suspend fun saveGeofence(geofence: NewGeofence): Result<Geofence> {
         return try {
             // Primero desactivar cualquier geofence anterior de esta mascota
@@ -48,7 +48,7 @@ class GeofenceRepository {
         }
     }
 
-    // ── Eliminar geofence de una mascota ──────────────────────────────────────
+    // Eliminar geofence de una mascota
     suspend fun deleteGeofence(mascotaId: String): Result<Unit> {
         return try {
             Supabase.client.from("geofences").delete {
@@ -60,7 +60,7 @@ class GeofenceRepository {
         }
     }
 
-    // ── Cargar historial de ubicaciones para heatmap ──────────────────────────
+    // Cargar historial de ubicaciones para heatmap
     suspend fun getUbicacionesHistorial(
         mascotaId: String,
         limite: Int = 500

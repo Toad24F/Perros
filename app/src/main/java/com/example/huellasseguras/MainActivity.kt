@@ -2,9 +2,14 @@ package com.example.huellasseguras
 
 import android.Manifest
 import android.content.Context
+import android.content.Intent
 import android.location.LocationManager
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.PowerManager
+import android.provider.Settings
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.animation.core.tween
@@ -27,6 +32,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import androidx.work.WorkManager
 import com.example.huellasseguras.Screens.AddMedicalRecordScreen
 import com.example.huellasseguras.Screens.AddPetScreen
 import com.example.huellasseguras.Screens.HomeScreen
@@ -34,6 +40,7 @@ import com.example.huellasseguras.Screens.LoginScreen
 import com.example.huellasseguras.Screens.PetProfileScreen
 import com.example.huellasseguras.Screens.RegisterScreen
 import com.example.huellasseguras.Supabase.Supabase
+import com.example.huellasseguras.Workers.GeofenceWorker
 import com.example.huellasseguras.ui.theme.PerrosTheme
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
@@ -44,6 +51,24 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         Supabase.client
         super.onCreate(savedInstanceState)
+        // Programar el chequeo de geofence en segundo plano
+        GeofenceWorker.schedule(this)
+        WorkManager.getInstance(this)
+            .getWorkInfosForUniqueWorkLiveData("geofence_check")
+            .observe(this) { workInfos ->
+                workInfos.forEach {
+                    Log.d("WorkManager", "Estado: ${it.state}")
+                }
+            }
+
+        val powerManager = getSystemService(POWER_SERVICE) as PowerManager
+        if (!powerManager.isIgnoringBatteryOptimizations(packageName)) {
+            val intent = Intent(
+                Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
+                Uri.parse("package:$packageName")
+            )
+        }
+            startActivity(intent)
         setContent {
             PerrosTheme {
                 Surface(

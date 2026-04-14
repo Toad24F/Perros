@@ -46,7 +46,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import coil.compose.AsyncImage
 
-// ── Utilidad: distancia en metros entre dos coords ────────────────────────────
+//  Utilidad: distancia en metros entre dos coords
 fun distanciaMetros(lat1: Double, lng1: Double, lat2: Double, lng2: Double): Double {
     val r = 6371000.0
     val dLat = Math.toRadians(lat2 - lat1)
@@ -68,17 +68,17 @@ fun MapScreen() {
     val petsRepository     = remember { PetsRepository() }
     val geofenceRepository = remember { GeofenceRepository() }
 
-    // ── Estado principal ──────────────────────────────────────────────────────
+    // Estado principal
     val userPetLocation  = remember { mutableStateListOf<PetLocation>() }
     var selectedPet      by remember { mutableStateOf<PetLocation?>(null) }
     var isLoading        by remember { mutableStateOf(true) }
     var errorMessage     by remember { mutableStateOf<String?>(null) }
 
-    // ── Modos de vista ────────────────────────────────────────────────────────
+    //  Modos de vista
     var modoHeatmap      by remember { mutableStateOf(false) }
     val heatmapPoints    = remember { mutableStateListOf<LatLng>() }
 
-    // ── Geofence ──────────────────────────────────────────────────────────────
+    // Geofence
     var geofenceActivo        by remember { mutableStateOf<Geofence?>(null) }
     var showGeofenceSheet     by remember { mutableStateOf(false) }
     // Centro temporal mientras el usuario configura
@@ -87,19 +87,19 @@ fun MapScreen() {
     // Track de alertas ya enviadas para no repetir
     val alertasEnviadas       = remember { mutableSetOf<String>() }
 
-    // ── Mapa ──────────────────────────────────────────────────────────────────
+    // Mapa
     val isDarkTheme            = isSystemInDarkTheme()
     val locationPermission     = rememberPermissionState(Manifest.permission.ACCESS_FINE_LOCATION)
     val cameraPositionState    = rememberCameraPositionState()
     var hasMovedCamera         by remember { mutableStateOf(false) }
     var userLocation           by remember { mutableStateOf<LatLng?>(null) }
 
-    // ── Inicializar canal de notificaciones ───────────────────────────────────
+    //  Inicializar canal de notificaciones
     LaunchedEffect(Unit) {
         NotificationHelper.createChannel(context)
     }
 
-    // ── Loop de actualización de mascotas (cada 5s) ───────────────────────────
+    //  Loop de actualización de mascotas (cada 5s)
     LaunchedEffect(userId) {
         if (userId.isBlank()) return@LaunchedEffect
         while (true) {
@@ -109,7 +109,7 @@ fun MapScreen() {
                 userPetLocation.addAll(pets)
                 if (selectedPet == null && pets.isNotEmpty()) selectedPet = pets[0]
 
-                // ── Chequeo de geofence ───────────────────────────────────────
+                // Chequeo de geofence
                 geofenceActivo?.let { gf ->
                     pets.forEach { pet ->
                         if (pet.id == gf.mascota_id) {
@@ -135,7 +135,7 @@ fun MapScreen() {
         }
     }
 
-    // ── Cargar geofence cuando cambia la mascota seleccionada ─────────────────
+    // Cargar geofence cuando cambia la mascota seleccionada
     LaunchedEffect(selectedPet) {
         selectedPet?.let { pet ->
             // Mover cámara
@@ -161,7 +161,7 @@ fun MapScreen() {
         }
     }
 
-    // ── Cargar heatmap al activar el modo ─────────────────────────────────────
+    // Cargar heatmap al activar el modo
     LaunchedEffect(modoHeatmap) {
         if (modoHeatmap) {
             selectedPet?.let { pet ->
@@ -174,7 +174,7 @@ fun MapScreen() {
         }
     }
 
-    // ── Ubicación del usuario ─────────────────────────────────────────────────
+    //  Ubicación del usuario
     LaunchedEffect(locationPermission.status.isGranted) {
         if (locationPermission.status.isGranted) {
             LocationServices.getFusedLocationProviderClient(context)
@@ -195,16 +195,14 @@ fun MapScreen() {
         }
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
     // UI
-    // ─────────────────────────────────────────────────────────────────────────
     Scaffold { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            // ── Mapa (80%) ────────────────────────────────────────────────────
+            // Mapa (80%)
             Box(modifier = Modifier.weight(0.8f)) {
                 GoogleMap(
                     modifier            = Modifier.fillMaxSize(),
@@ -227,7 +225,7 @@ fun MapScreen() {
                         }
                     }
                 ) {
-                    // ── Marcadores de mascotas ────────────────────────────────
+                    //Marcadores de mascotas
                     userPetLocation.forEach { pet ->
                         val position = LatLng(pet.lat, pet.lng)
                         val icon = rememberPetMarkerIcon(
@@ -248,7 +246,7 @@ fun MapScreen() {
                         }
                     }
 
-                    // ── Círculo de geofence guardado ──────────────────────────
+                    // Círculo de geofence guardado
                     geofenceActivo?.let { gf ->
                         val center = LatLng(gf.lat, gf.lng)
                         Circle(
@@ -266,7 +264,7 @@ fun MapScreen() {
                         )
                     }
 
-                    // ── Círculo temporal mientras configura ───────────────────
+                    // Círculo temporal mientras configura
                     if (showGeofenceSheet) {
                         geofenceCenterTemp?.let { center ->
                             Circle(
@@ -280,7 +278,7 @@ fun MapScreen() {
                         }
                     }
 
-                    // ── Heatmap ───────────────────────────────────────────────
+                    //  Heatmap
                     if (modoHeatmap && heatmapPoints.size >= 2) {
                         val provider = remember(heatmapPoints.toList()) {
                             HeatmapTileProvider.Builder()
@@ -292,7 +290,7 @@ fun MapScreen() {
                     }
                 }
 
-                // ── Controles personalizados (abajo derecha) ──────────────────────────
+                // Controles personalizados (abajo derecha)
                 Column(
                     modifier              = Modifier
                         .align(Alignment.BottomEnd)
@@ -372,7 +370,7 @@ fun MapScreen() {
                     }
                 }
 
-                // ── Indicador heatmap ─────────────────────────────────────────
+                // Indicador heatmap
                 if (modoHeatmap) {
                     Surface(
                         modifier       = Modifier
@@ -390,7 +388,7 @@ fun MapScreen() {
                 }
             }
 
-            // ── Lista de mascotas (20%) ───────────────────────────────────────
+            // Lista de mascotas (20%)
             Box(modifier = Modifier.weight(0.2f)) {
                 if (isLoading) {
                     LinearWavyProgressIndicator(modifier = Modifier.fillMaxWidth())
@@ -423,7 +421,7 @@ fun MapScreen() {
         }
     }
 
-    // ── Bottom Sheet de configuración de geofence ─────────────────────────────
+    // Bottom Sheet de configuración de geofence
     if (showGeofenceSheet) {
         GeofenceBottomSheet(
             petName          = selectedPet?.nombre ?: "",
@@ -462,9 +460,7 @@ fun MapScreen() {
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 // Bottom Sheet de Geofence
-// ─────────────────────────────────────────────────────────────────────────────
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GeofenceBottomSheet(
@@ -596,9 +592,7 @@ fun GeofenceBottomSheet(
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 // Item de mascota en la lista (actualizado con indicador de geofence)
-// ─────────────────────────────────────────────────────────────────────────────
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun PetMapItem(
