@@ -17,7 +17,8 @@ class authRespository {
         emailInput: String,
         passwordInput: String,
         nombre: String,
-        apellido: String): String?{
+        apellido: String,
+        telefono: String): String?{
         if (emailInput.isBlank() || passwordInput.isBlank()) {
             return "Email y contraseña no pueden estar vacíos"
         }
@@ -28,6 +29,7 @@ class authRespository {
                 data = buildJsonObject {
                     put("Nombre", nombre)
                     put("Apellido", apellido)
+                    put("Telefono", telefono)
                 }
             }
             // 2. Si el registro es exitoso, Supabase nos devuelve el objeto User

@@ -45,8 +45,8 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.huellasseguras.R
-import kotlinx.coroutines.launch
 import com.example.huellasseguras.data.authRespository
+import kotlinx.coroutines.launch
 
 @Composable
 fun RegisterScreen(
@@ -55,6 +55,7 @@ fun RegisterScreen(
     // Estados para los campos del formulario
     var nombre by remember { mutableStateOf("") }
     var apellido by remember { mutableStateOf("") }
+    var telefono by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
@@ -141,6 +142,20 @@ fun RegisterScreen(
                     .fillMaxWidth()
                     .padding(bottom = 16.dp)
             )
+            // Campo de Teléfono
+            OutlinedTextField(
+                value = telefono,
+                onValueChange = { telefono = it },
+                label = { Text("Teléfono") },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Phone, // Muestra el teclado numérico
+                    imeAction = ImeAction.Next
+                ),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 16.dp)
+            )
 
             // Campo de Email con validación visual
             OutlinedTextField(
@@ -219,7 +234,7 @@ fun RegisterScreen(
                 onClick = {
                     // Validaciones
                     when {
-                        nombre.isEmpty() || apellido.isEmpty() || email.isEmpty() || password.isEmpty() -> {
+                        nombre.isEmpty() || apellido.isEmpty() || telefono.isEmpty() ||email.isEmpty() || password.isEmpty() -> {
                             errorMessage = "Por favor complete todos los campos"
                             return@Button
                         }
@@ -238,7 +253,7 @@ fun RegisterScreen(
                     }
                     isLoading = true
                     scope.launch {
-                        val error = authRespository.registerUser(context,email, password, nombre, apellido)
+                        val error = authRespository.registerUser(context,email, password, nombre, apellido,telefono)
                         if (error == null) {
                             // Navegar a la pantalla de inicio
                             navController.navigate("home") {

@@ -35,6 +35,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -181,7 +182,8 @@ fun CollaresAdminScreen(navController: NavController) {
                         selectedPetForLinking = pet
                         showDeviceDialog = true
                         isScanning = true
-                    }
+                    },
+                    onNfcClick = { navController.navigate("nfcWrite/${pet.id}") }
                 )
             }
 
@@ -242,7 +244,7 @@ fun CollaresAdminScreen(navController: NavController) {
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-fun CollarPetCard(pet: Pet, isScanning: Boolean, onLinkClick: () -> Unit) {
+fun CollarPetCard(pet: Pet, isScanning: Boolean, onLinkClick: () -> Unit, onNfcClick: () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
@@ -273,12 +275,29 @@ fun CollarPetCard(pet: Pet, isScanning: Boolean, onLinkClick: () -> Unit) {
                 )
             }
 
-            Button(
-                onClick = onLinkClick,
-                shape = RoundedCornerShape(8.dp),
-                contentPadding = PaddingValues(horizontal = 12.dp)
-            ) {
-                Text("Vincular")
+            Column(horizontalAlignment = Alignment.End) {
+                Button(
+                    onClick = onLinkClick,
+                    shape = RoundedCornerShape(8.dp),
+                    contentPadding = PaddingValues(horizontal = 12.dp)
+                ) {
+                    Text("BLE")
+                }
+                Spacer(modifier = Modifier.height(6.dp))
+                OutlinedButton(
+                    onClick = onNfcClick,  // nuevo parámetro a añadir
+                    shape = RoundedCornerShape(8.dp),
+                    contentPadding = PaddingValues(horizontal = 8.dp)
+                ) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.ic_nfc),
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                        tint = Color.Unspecified
+                    )
+                    Spacer(Modifier.width(4.dp))
+                    Text("NFC")
+                }
             }
         }
     }

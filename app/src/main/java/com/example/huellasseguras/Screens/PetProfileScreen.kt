@@ -2,6 +2,8 @@ package com.example.huellasseguras.Screens
 
 import android.content.Intent
 import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
@@ -30,6 +32,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Search
@@ -57,6 +60,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -74,6 +78,7 @@ import com.example.huellasseguras.data.PetsRepository
 import com.example.huellasseguras.data.medicHistoryRepository
 import com.example.huellasseguras.model.MedicalRecord
 import com.example.huellasseguras.model.Pet
+import kotlinx.coroutines.launch
 import androidx.navigation.NavController as NavController1
 
 //Tipos disponibles (ajusta si añades más en Supabase)
@@ -510,20 +515,53 @@ fun ReminderDialogItem(record: MedicalRecord, isProximo: Boolean) {
 }
 
 // Componentes existentes
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun PetHeaderSection(pet: Pet?) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var isLoading by remember { mutableStateOf(true) }
+    val petsRepository = remember { PetsRepository() }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+    // Launcher para seleccionar la imagen
+    val galleryLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let { selectedUri ->
+            scope.launch {
+                // 3. Si hay foto, subirla usando el ID de la mascota creada
+                if (pet != null) {
+                    isLoading = true
+                    val uploadResult = petsRepository.uploadPetPhoto(pet!!.id,
+                        selectedUri, context)
+                    uploadResult.onSuccess { photoUrl ->
+                        // 4. Actualizar la mascota con su nueva URL de foto
+                        petsRepository.updatePetPhotoUrl(pet!!.id, photoUrl)
+                        //pet = pet.copy(foto_url = photoUrl)
+                        isLoading = false
+                    }.onFailure {
+                        errorMessage = "Error al subir la imagen"
+                        isLoading = false
+                    }
+                }
+            }
+        }
+    }
+
     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
         Box(
             modifier = Modifier
                 .size(120.dp)
                 .clip(CircleShape)
                 .background(MaterialTheme.colorScheme.primaryContainer)
-                .border(2.dp, MaterialTheme.colorScheme.primary, CircleShape),
+                .border(2.dp, MaterialTheme.colorScheme.primary, CircleShape)
+                .clickable { galleryLauncher.launch("image/*") },
             contentAlignment = Alignment.Center
         ) {
             if (!pet?.foto_url.isNullOrEmpty()) {
+                CircularWavyProgressIndicator()
                 AsyncImage(
-                    model            = pet?.foto_url,
+                    model = "${pet.foto_url}?t=${System.currentTimeMillis()}",
                     contentDescription = null,
                     modifier         = Modifier.fillMaxSize(),
                     contentScale     = ContentScale.Crop
@@ -534,6 +572,19 @@ fun PetHeaderSection(pet: Pet?) {
                     contentDescription = null,
                     modifier         = Modifier.size(60.dp),
                     tint             = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+            }
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.2f)),
+                contentAlignment = Alignment.BottomCenter
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Edit,
+                    contentDescription = "Cambiar foto",
+                    tint = Color.White,
+                    modifier = Modifier.padding(bottom = 8.dp).size(20.dp)
                 )
             }
         }

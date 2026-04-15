@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.location.LocationManager
 import android.net.Uri
+import android.nfc.NfcAdapter
 import android.os.Build
 import android.os.Bundle
 import android.os.PowerManager
@@ -32,14 +33,17 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import androidx.navigation.navDeepLink
 import androidx.work.WorkManager
 import com.example.huellasseguras.Screens.AddMedicalRecordScreen
 import com.example.huellasseguras.Screens.AddPetScreen
 import com.example.huellasseguras.Screens.HomeScreen
 import com.example.huellasseguras.Screens.LoginScreen
+import com.example.huellasseguras.Screens.NfcWriteRegistry
+import com.example.huellasseguras.Screens.NfcWriteScreenWrapper
+import com.example.huellasseguras.Screens.PetFoundScreen
 import com.example.huellasseguras.Screens.PetProfileScreen
 import com.example.huellasseguras.Screens.RegisterScreen
-import com.example.huellasseguras.Supabase.Supabase
 import com.example.huellasseguras.Workers.GeofenceWorker
 import com.example.huellasseguras.ui.theme.PerrosTheme
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
@@ -49,8 +53,9 @@ import com.google.accompanist.permissions.rememberPermissionState
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
-        Supabase.client
+        // Supabase.client (Asegúrate de que esto hace lo que necesitas, o si sobra)
         super.onCreate(savedInstanceState)
+
         // Programar el chequeo de geofence en segundo plano
         GeofenceWorker.schedule(this)
         WorkManager.getInstance(this)
@@ -67,8 +72,9 @@ class MainActivity : ComponentActivity() {
                 Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
                 Uri.parse("package:$packageName")
             )
+            startActivity(intent) // <-- Esto debe ir dentro del IF
         }
-            startActivity(intent)
+
         setContent {
             PerrosTheme {
                 Surface(
@@ -79,6 +85,32 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    } // <-- AQUÍ SE CIERRA EL onCreate
+
+// Estas funciones van a nivel de la clase (fuera de onCreate)
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleNfcIntent(intent)
+    }
+
+    private fun handleNfcIntent(intent: Intent) {
+        // Caso 1: Llegó una etiqueta NFC para ESCRITURA (desde NfcWriteScreen)
+        val tag = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            intent.getParcelableExtra(NfcAdapter.EXTRA_TAG, android.nfc.Tag::class.java)
+        } else {
+            @Suppress("DEPRECATION")
+            intent.getParcelableExtra(NfcAdapter.EXTRA_TAG)
+        }
+
+        if (tag != null) {
+            // Hay una pantalla de escritura activa, enviarle la etiqueta
+            NfcWriteRegistry.dispatch(tag)
+            return
+        }
+
+
     }
 }
 // --- Navegación entre pantallas ---
@@ -140,6 +172,24 @@ public fun AppNavigation() {
         composable("addMedicalRecord/{petId}") { backStackEntry ->
             val petId = backStackEntry.arguments?.getString("petId") ?: ""
             AddMedicalRecordScreen(petId = petId, navController = navController)
+        }
+        composable(
+            route = "petFound/{petId}",
+            deepLinks = listOf(
+                navDeepLink {
+                    // Esto le dice a Compose: "Si llega un Intent con esta URL, abre esta pantalla"
+                    uriPattern = "huellaliza://mascota/{petId}"
+                }
+            )
+        ) { backStackEntry ->
+            val petId = backStackEntry.arguments?.getString("petId") ?: ""
+            PetFoundScreen(petId = petId)
+        }
+
+        composable("nfcWrite/{petId}") { backStackEntry ->
+            val petId = backStackEntry.arguments?.getString("petId") ?: ""
+            // Necesitas cargar la mascota primero
+            NfcWriteScreenWrapper(petId = petId, navController = navController)
         }
         composable(
             route = "registro",
