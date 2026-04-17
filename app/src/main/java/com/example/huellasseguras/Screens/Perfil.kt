@@ -37,8 +37,11 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import androidx.work.WorkManager
 import com.example.huellasseguras.R
+import com.example.huellasseguras.Supabase.Supabase
 import com.example.huellasseguras.Workers.GeofenceWorker
+import io.github.jan.supabase.auth.auth
 import kotlinx.coroutines.launch
 
 @Composable
@@ -140,6 +143,8 @@ fun ProfileScreen(navController: NavController) {
                             GeofenceWorker.cancel(context)
                             // Limpiar SharedPreferences
                             sharedPref.edit().clear().apply()
+                            Supabase.client.auth.signOut()
+                            WorkManager.getInstance(context).cancelAllWork()
                             // Redirigir al login
                             navController.navigate("login") {
                                 popUpTo(0)

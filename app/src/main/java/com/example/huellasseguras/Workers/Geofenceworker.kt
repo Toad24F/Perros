@@ -119,7 +119,7 @@ class GeofenceWorker(
 
             WorkManager.getInstance(context).enqueueUniquePeriodicWork(
                 WORK_NAME,
-                ExistingPeriodicWorkPolicy.KEEP, // No reprogramar si ya existe
+                ExistingPeriodicWorkPolicy.REPLACE,
                 request
             )
         }
