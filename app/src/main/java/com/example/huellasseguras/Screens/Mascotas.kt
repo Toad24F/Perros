@@ -181,7 +181,7 @@ fun Mascotas(navController: NavController) {
 
             item {
                 AddPetButton {
-                        navController.navigate("addPet")
+                        navController.navigate("addGanado")
                 }
             }
         }

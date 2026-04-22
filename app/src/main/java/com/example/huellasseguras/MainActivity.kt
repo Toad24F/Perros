@@ -35,8 +35,8 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import androidx.navigation.navDeepLink
 import androidx.work.WorkManager
+import com.example.huellasseguras.Screens.AddGanadoScreen
 import com.example.huellasseguras.Screens.AddMedicalRecordScreen
-import com.example.huellasseguras.Screens.AddPetScreen
 import com.example.huellasseguras.Screens.HomeScreen
 import com.example.huellasseguras.Screens.LoginScreen
 import com.example.huellasseguras.Screens.NfcWriteRegistry
@@ -164,10 +164,10 @@ public fun AppNavigation() {
                 fadeOut(animationSpec = tween(300))
             }
         ) { HomeScreen(navController) }
-        composable("addPet") {
+        composable("addGanado") {
             val sharedPref = context.getSharedPreferences("user_session", Context.MODE_PRIVATE)
             val userId = sharedPref.getString("user_id", "") ?: ""
-            AddPetScreen(navController, userId)
+            AddGanadoScreen(navController, userId)
         }
         composable("addMedicalRecord/{petId}") { backStackEntry ->
             val petId = backStackEntry.arguments?.getString("petId") ?: ""
