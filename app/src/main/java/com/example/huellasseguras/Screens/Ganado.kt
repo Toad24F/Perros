@@ -48,13 +48,13 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.example.huellasseguras.R
-import com.example.huellasseguras.data.PetsRepository
-import com.example.huellasseguras.model.Pet
+import com.example.huellasseguras.data.GanadoRepository
+import com.example.huellasseguras.model.Ganado
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-fun Mascotas(navController: NavController) {
+fun Ganado(navController: NavController) {
     val context = LocalContext.current
     val sharedPref = remember { context.getSharedPreferences("user_session", Context.MODE_PRIVATE) }
     val userId = remember { sharedPref.getString("user_id", "") ?: "" }
@@ -62,25 +62,24 @@ fun Mascotas(navController: NavController) {
     var searchText by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(true) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
-    // Estado para las mascotas del usuario
-    val userPets = remember { mutableStateListOf<Pet>() }
+    val userGanado = remember { mutableStateListOf<Ganado>() }
     val scope = rememberCoroutineScope()
-    val petsRepository = remember { PetsRepository() }
+    val ganadoRepository = remember { GanadoRepository() }
 
-    // Cargar mascotas al iniciar
+    // Cargar ganado al iniciar
     LaunchedEffect( true) {
         if (userId.isNotEmpty()) {
             isLoading = true
-                val result = petsRepository.loadPets(userId)
-                result.onSuccess { pets ->
-                    userPets.clear()
-                    userPets.addAll(pets)
-                    isLoading = false
-                }
-                result.onFailure {
-                    errorMessage = it.message
-                    isLoading = false
-                }
+            val result = ganadoRepository.loadGanado(userId)
+            result.onSuccess { ganado ->
+                userGanado.clear()
+                userGanado.addAll(ganado)
+                isLoading = false
+            }
+            result.onFailure {
+                errorMessage = it.message
+                isLoading = false
+            }
         }
     }
 
@@ -122,7 +121,7 @@ fun Mascotas(navController: NavController) {
         OutlinedTextField(
             value = searchText,
             onValueChange = { searchText = it },
-            label = { Text("Buscar mascota") },
+            label = { Text("Buscar ganado") },
             leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Buscar") },
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(20.dp)
@@ -140,19 +139,21 @@ fun Mascotas(navController: NavController) {
             Button(
                 onClick = {
                     scope.launch {
-                        val result = petsRepository.loadPets(userId)
-                        result.onSuccess { pets ->
-                            userPets.clear()
-                            userPets.addAll(pets)
+                        val result = ganadoRepository.loadGanado(userId)
+                        result.onSuccess { ganado ->
+                            userGanado.clear()
+                            userGanado.addAll(ganado)
+                            isLoading = false
                         }
                         result.onFailure {
                             errorMessage = it.message
+                            isLoading = false
                         }
 
                     }
                 }
             ) {
-                Text("Cargar mascotas")
+                Text("Cargar ganado")
             }
         }
 
@@ -162,20 +163,20 @@ fun Mascotas(navController: NavController) {
             Spacer(modifier = Modifier.height(20.dp))
         }
 
-        // Lista de mascotas
+        // Lista de ganado
         LazyVerticalGrid(
             columns = GridCells.Fixed(3),
             modifier = Modifier.fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(16.dp),
             horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            items(userPets.filter {
-                it.nombre.contains(searchText, ignoreCase = true) ||
+            items(userGanado.filter {
+                it.nombre!!.contains(searchText, ignoreCase = true) ||
                         it.tipo.contains(searchText, ignoreCase = true)
-            }) { pet ->
-                PetItem(pet = pet) {
-                    navController.navigate("petDetail/${pet.id}")
-                    println(pet.id)
+            }) { ganado ->
+                GanadoItem(ganado = ganado) {
+                    navController.navigate("ganadoDetail/${ganado.id}")
+                    println(ganado.id)
                 }
             }
 
@@ -191,19 +192,19 @@ fun Mascotas(navController: NavController) {
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-fun PetItem(pet: Pet, onClick: () -> Unit) {
+fun GanadoItem(ganado: Ganado, onClick: () -> Unit) {
     // Mostrar loading
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier.clickable(onClick = onClick)
     ) {
         // Icono según el tipo de mascota
-        val iconRes = when(pet.tipo.lowercase()) {
-            "perro" -> R.drawable.ic_dog
-            "gato" -> R.drawable.ic_cat
-            "ave" -> R.drawable.ic_bird
-            "pez" -> R.drawable.ic_fish
-            "reptil" -> R.drawable.ic_reptile
+        val iconRes = when(ganado.tipo.lowercase()) {
+            "Bovino" -> R.drawable.ic_bovino
+            "Porcino" -> R.drawable.ic_porcino
+            "Ovino" -> R.drawable.ic_ovino
+            "Caprino" -> R.drawable.ic_caprino
+            "equino" -> R.drawable.ic_equino
             else -> R.drawable.ic_pet
         }
 
@@ -215,18 +216,18 @@ fun PetItem(pet: Pet, onClick: () -> Unit) {
             contentAlignment = Alignment.Center
         ) {
             // Lógica para decidir si mostrar FOTO o ICONO
-            if (!pet.foto_url.isNullOrBlank()) {
+            if (!ganado.foto_url.isNullOrBlank()) {
                 CircularWavyProgressIndicator()
                 AsyncImage(
-                    model = "${pet.foto_url}?t=${System.currentTimeMillis()}",
-                    contentDescription = pet.nombre,
+                    model = "${ganado.foto_url}?t=${System.currentTimeMillis()}",
+                    contentDescription = ganado.nombre,
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop
                 )
             } else {
                 Icon(
                     painter = painterResource(id = iconRes),
-                    contentDescription = pet.nombre,
+                    contentDescription = ganado.nombre,
                     modifier = Modifier.size(40.dp),
                     tint = MaterialTheme.colorScheme.onSecondaryContainer
                 )
@@ -234,13 +235,13 @@ fun PetItem(pet: Pet, onClick: () -> Unit) {
         }
         Spacer(modifier = Modifier.height(8.dp))
         Text(
-            text = pet.nombre,
+            text = ganado.nombre.toString(),
             style = MaterialTheme.typography.bodyMedium,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
         )
         Text(
-            text = pet.tipo,
+            text = ganado.tipo,
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
         )

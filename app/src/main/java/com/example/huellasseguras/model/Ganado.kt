@@ -13,7 +13,9 @@ data class Ganado(
     val peso: Double? = null,
     val fecha_nacimiento: String? = null,
     val madre_id: String? = null,
-    val padre_id: String? = null
+    val padre_id: String? = null,
+    val foto_url: String? = null,
+    val user_id: String? = null
 )
 
 // Modelo para insertar (sin id — Supabase lo genera o usamos UUID)

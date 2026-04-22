@@ -64,7 +64,7 @@ fun HomeScreen(navController: NavController) {
         ) {
             when (selectedTab) {
                 0 -> MapScreen()
-                1 -> Mascotas(navController)
+                1 -> Ganado(navController)
                 2 -> CollaresAdminScreen( navController)
                 3 -> ProfileScreen(navController)
             }
