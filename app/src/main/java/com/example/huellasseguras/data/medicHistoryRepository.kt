@@ -10,12 +10,12 @@ import io.github.jan.supabase.storage.storage
 
 class medicHistoryRepository {
 
-    // ── Cargar registros de una mascota ───────────────────────────────────────
-    suspend fun loadMedicalRecords(petId: String): Result<List<MedicalRecord>> {
+    // ── Cargar registros de un animal ─────────────────────────────────────────
+    suspend fun loadMedicalRecords(ganadoId: String): Result<List<MedicalRecord>> {
         return try {
             val records = Supabase.client.from("historial_medico")
                 .select {
-                    filter { eq("pet_id", petId) }
+                    filter { eq("ganado_id", ganadoId) }
                 }
                 .decodeList<MedicalRecord>()
             Result.success(records)
@@ -24,29 +24,21 @@ class medicHistoryRepository {
         }
     }
 
-    // Agregar nuevo registro (con documento opcional)
+    // ── Agregar nuevo registro (con documento opcional) ───────────────────────
     suspend fun addMedicalRecord(
         record: NewMedicalRecord,
         documentoUri: Uri?,
         context: Context
     ): Result<MedicalRecord> {
         return try {
-            // 1. Insertar el registro y obtener el ID generado
             val created = Supabase.client.from("historial_medico")
                 .insert(record) { select() }
                 .decodeSingle<MedicalRecord>()
 
-            // 2. Si hay documento, subirlo y actualizar la URL
             if (documentoUri != null && created.id != null) {
                 val uploadResult = uploadDocument(created.id, documentoUri, context)
-                uploadResult.onSuccess { url ->
-                    updateDocumentUrl(created.id, url)
-                }
-                // Devolver el registro con la URL actualizada
-                val updated = created.copy(
-                    documento_url = uploadResult.getOrNull()
-                )
-                Result.success(updated)
+                uploadResult.onSuccess { url -> updateDocumentUrl(created.id, url) }
+                Result.success(created.copy(documento_url = uploadResult.getOrNull()))
             } else {
                 Result.success(created)
             }
@@ -56,7 +48,7 @@ class medicHistoryRepository {
         }
     }
 
-    // Subir documento a Supabase Storage
+    // ── Subir documento a Supabase Storage ────────────────────────────────────
     private suspend fun uploadDocument(
         recordId: String,
         documentoUri: Uri,
@@ -64,44 +56,34 @@ class medicHistoryRepository {
     ): Result<String> {
         return try {
             val bucket = Supabase.client.storage.from("historial_documentos")
-
-            // Detectar extensión del archivo
-            val mimeType =
-                context.contentResolver.getType(documentoUri) ?: "application/octet-stream"
+            val mimeType = context.contentResolver.getType(documentoUri) ?: "application/octet-stream"
             val extension = when {
-                mimeType.contains("pdf") -> "pdf"
-                mimeType.contains("png") -> "png"
+                mimeType.contains("pdf")  -> "pdf"
+                mimeType.contains("png")  -> "png"
                 mimeType.contains("jpeg") -> "jpg"
-                mimeType.contains("jpg") -> "jpg"
+                mimeType.contains("jpg")  -> "jpg"
                 else -> "bin"
             }
             val fileName = "record_${recordId}.$extension"
-
             val bytes = context.contentResolver
                 .openInputStream(documentoUri)
                 ?.readBytes()
                 ?: throw Exception("No se pudo leer el archivo")
 
-            bucket.upload(path = fileName, data = bytes) {
-                upsert = true
-            }
-
-            val url = bucket.publicUrl(fileName)
-            Result.success(url)
+            bucket.upload(path = fileName, data = bytes) { upsert = true }
+            Result.success(bucket.publicUrl(fileName))
         } catch (e: Exception) {
             e.printStackTrace()
             Result.failure(e)
         }
     }
 
-    // Actualizar URL del documento en la tabla
+    // ── Actualizar URL del documento ─────────────────────────────────────────
     private suspend fun updateDocumentUrl(recordId: String, url: String) {
         try {
             Supabase.client.from("historial_medico").update(
                 { set("documento_url", url) }
-            ) {
-                filter { eq("id", recordId) }
-            }
+            ) { filter { eq("id", recordId) } }
         } catch (e: Exception) {
             e.printStackTrace()
         }

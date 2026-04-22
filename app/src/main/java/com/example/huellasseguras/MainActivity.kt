@@ -35,15 +35,15 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import androidx.navigation.navDeepLink
 import androidx.work.WorkManager
-import com.example.huellasseguras.Screens.AddGanadoScreen
-import com.example.huellasseguras.Screens.AddMedicalRecordScreen
+import com.example.huellasseguras.Screens.Auth.LoginScreen
+import com.example.huellasseguras.Screens.Auth.RegisterScreen
+import com.example.huellasseguras.Screens.Collares.NfcWriteRegistry
+import com.example.huellasseguras.Screens.Collares.NfcWriteScreenWrapper
 import com.example.huellasseguras.Screens.HomeScreen
-import com.example.huellasseguras.Screens.LoginScreen
-import com.example.huellasseguras.Screens.NfcWriteRegistry
-import com.example.huellasseguras.Screens.NfcWriteScreenWrapper
 import com.example.huellasseguras.Screens.PetFoundScreen
-import com.example.huellasseguras.Screens.PetProfileScreen
-import com.example.huellasseguras.Screens.RegisterScreen
+import com.example.huellasseguras.Screens.ganado.AddGanadoScreen
+import com.example.huellasseguras.Screens.ganado.AddMedicalRecordScreen
+import com.example.huellasseguras.Screens.ganado.GanadoDetailScreen
 import com.example.huellasseguras.Workers.GeofenceWorker
 import com.example.huellasseguras.ui.theme.PerrosTheme
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
@@ -207,16 +207,16 @@ public fun AppNavigation() {
             }
         ) { RegisterScreen(navController) }
         composable(
-            route = "petDetail/{petId}",
+            route = "ganadoDetail/{ganadoId}",
             arguments = listOf(
-                navArgument("petId") {
+                navArgument("ganadoId") {
                     type = NavType.StringType
                 }
             )
         ) { backStackEntry ->
-            val petId = backStackEntry.arguments?.getString("petId")
-            if (petId != null) {
-                PetProfileScreen(petId = petId, navController = navController)
+            val ganadoId = backStackEntry.arguments?.getString("ganadoId")
+            if (ganadoId != null) {
+                GanadoDetailScreen(ganadoId = ganadoId, navController = navController)
             } else {
                 // Manejo de error si petId es null
                 Text("Error: ID de mascota no válido")

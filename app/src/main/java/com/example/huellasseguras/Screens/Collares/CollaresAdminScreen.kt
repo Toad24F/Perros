@@ -1,4 +1,4 @@
-package com.example.huellasseguras.Screens
+package com.example.huellasseguras.Screens.Collares
 
 import android.bluetooth.BluetoothDevice
 import android.content.Context

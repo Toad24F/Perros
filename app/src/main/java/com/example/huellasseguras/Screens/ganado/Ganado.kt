@@ -1,4 +1,4 @@
-package com.example.huellasseguras.Screens
+package com.example.huellasseguras.Screens.ganado
 
 import android.content.Context
 import androidx.compose.foundation.background

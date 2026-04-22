@@ -1,4 +1,4 @@
-package com.example.huellasseguras.Screens
+package com.example.huellasseguras.Screens.ganado
 
 import android.content.Context
 import android.net.Uri
@@ -20,6 +20,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.Button
 import androidx.compose.material3.CenterAlignedTopAppBar
@@ -51,6 +52,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
+import com.example.huellasseguras.R
 import com.example.huellasseguras.data.PetsRepository
 import com.example.huellasseguras.model.NewPet
 import kotlinx.coroutines.launch
@@ -93,7 +95,7 @@ fun AddPetScreen(navController: NavController, userId: String) {
                 title = { Text("Nueva Mascota") },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(androidx.compose.material.icons.Icons.Default.ArrowBack, contentDescription = "Atrás")
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Atrás")
                     }
                 }
             )
@@ -126,7 +128,7 @@ fun AddPetScreen(navController: NavController, userId: String) {
                     )
                 } else {
                     Icon(
-                        painter = painterResource(id = com.example.huellasseguras.R.drawable.ic_add),
+                        painter = painterResource(id = R.drawable.ic_add),
                         contentDescription = "Añadir foto",
                         modifier = Modifier.size(60.dp),
                         tint = MaterialTheme.colorScheme.onPrimaryContainer

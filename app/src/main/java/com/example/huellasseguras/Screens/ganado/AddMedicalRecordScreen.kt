@@ -1,13 +1,23 @@
-package com.example.huellasseguras.Screens
+package com.example.huellasseguras.Screens.ganado
 
 
 import android.net.Uri
+import android.provider.OpenableColumns
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -15,8 +25,31 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.DateRange
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberDatePickerState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -29,9 +62,9 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.huellasseguras.R
 import com.example.huellasseguras.data.medicHistoryRepository
-import com.example.huellasseguras.model.NewMedicalRecord
-import kotlinx.coroutines.launch
+import java.time.Instant
 import java.time.LocalDate
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
 val TIPOS_DISPONIBLES = listOf("Vacuna", "Desparasitacion", "Alergia", "Peso", "Enfermedad", "Cirugia", "Consulta")
@@ -74,7 +107,7 @@ fun AddMedicalRecordScreen(petId: String, navController: NavController) {
             documentoNombre = context.contentResolver
                 .query(it, null, null, null, null)
                 ?.use { cursor ->
-                    val idx = cursor.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
+                    val idx = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
                     cursor.moveToFirst()
                     if (idx >= 0) cursor.getString(idx) else "documento"
                 } ?: "documento"
@@ -314,27 +347,27 @@ fun AddMedicalRecordScreen(petId: String, navController: NavController) {
                     errorMessage = null
                     isLoading    = true
 
-                    scope.launch {
-                        val newRecord = NewMedicalRecord(
-                            pet_id          = petId,
-                            tipo_registro   = tipoSeleccionado,
-                            titulo          = titulo,
-                            descripcion     = descripcion.ifBlank { null },
-                            fecha           = fecha,
-                            valor_numerico  = valorNumerico.toFloatOrNull(),
-                            proxima_cita    = proximaCita.ifBlank { null },
-                            documento_url   = null   // se actualizará tras subir
-                        )
-
-                        val result = repository.addMedicalRecord(newRecord, documentoUri, context)
-
-                        result.onSuccess {
-                            navController.popBackStack()
-                        }.onFailure {
-                            errorMessage = "Error al guardar: ${it.message}"
-                            isLoading    = false
-                        }
-                    }
+//                    scope.launch {
+//                        val newRecord = NewMedicalRecord(
+//                            pet_id          = petId,
+//                            tipo_registro   = tipoSeleccionado,
+//                            titulo          = titulo,
+//                            descripcion     = descripcion.ifBlank { null },
+//                            fecha           = fecha,
+//                            valor_numerico  = valorNumerico.toFloatOrNull(),
+//                            proxima_cita    = proximaCita.ifBlank { null },
+//                            documento_url   = null   // se actualizará tras subir
+//                        )
+//
+//                        val result = repository.addMedicalRecord(newRecord, documentoUri, context)
+//
+//                        result.onSuccess {
+//                            navController.popBackStack()
+//                        }.onFailure {
+//                            errorMessage = "Error al guardar: ${it.message}"
+//                            isLoading    = false
+//                        }
+//                    }
                 },
                 modifier = Modifier
                     .fillMaxWidth()
@@ -363,8 +396,8 @@ fun AddMedicalRecordScreen(petId: String, navController: NavController) {
             confirmButton    = {
                 TextButton(onClick = {
                     datePickerStateFecha.selectedDateMillis?.let { millis ->
-                        fecha = java.time.Instant.ofEpochMilli(millis)
-                            .atZone(java.time.ZoneId.of("UTC"))
+                        fecha = Instant.ofEpochMilli(millis)
+                            .atZone(ZoneId.of("UTC"))
                             .toLocalDate()
                             .format(FECHA_FORMATTER)
                     }
@@ -385,8 +418,8 @@ fun AddMedicalRecordScreen(petId: String, navController: NavController) {
             confirmButton    = {
                 TextButton(onClick = {
                     datePickerStateProximaCita.selectedDateMillis?.let { millis ->
-                        proximaCita = java.time.Instant.ofEpochMilli(millis)
-                            .atZone(java.time.ZoneId.of("UTC"))
+                        proximaCita = Instant.ofEpochMilli(millis)
+                            .atZone(ZoneId.of("UTC"))
                             .toLocalDate()
                             .format(FECHA_FORMATTER)
                     }

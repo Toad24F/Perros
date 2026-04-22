@@ -1,4 +1,4 @@
-package com.example.huellasseguras.Screens
+package com.example.huellasseguras.Screens.ganado
 
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -57,10 +57,13 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
+import com.example.huellasseguras.R
 import com.example.huellasseguras.data.GanadoRepository
 import com.example.huellasseguras.model.NewGanado
 import kotlinx.coroutines.launch
+import java.time.Instant
 import java.time.LocalDate
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
 private val FECHA_FORMATTER: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
@@ -161,7 +164,7 @@ fun AddGanadoScreen(navController: NavController, userId: String) {
                     )
                 } else {
                     Icon(
-                        painter = painterResource(id = com.example.huellasseguras.R.drawable.ic_add),
+                        painter = painterResource(id = R.drawable.ic_add),
                         contentDescription = "Añadir foto",
                         modifier = Modifier.size(60.dp),
                         tint = MaterialTheme.colorScheme.onPrimaryContainer
@@ -430,8 +433,8 @@ fun AddGanadoScreen(navController: NavController, userId: String) {
             confirmButton    = {
                 TextButton(onClick = {
                     datePickerStateFecha.selectedDateMillis?.let { millis ->
-                        fechaNacimiento = java.time.Instant.ofEpochMilli(millis)
-                            .atZone(java.time.ZoneId.of("UTC"))
+                        fechaNacimiento = Instant.ofEpochMilli(millis)
+                            .atZone(ZoneId.of("UTC"))
                             .toLocalDate()
                             .format(FECHA_FORMATTER)
                     }

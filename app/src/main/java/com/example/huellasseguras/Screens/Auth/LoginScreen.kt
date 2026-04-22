@@ -1,4 +1,4 @@
-package com.example.huellasseguras.Screens
+package com.example.huellasseguras.Screens.Auth
 
 import android.util.Patterns
 import androidx.compose.foundation.Image

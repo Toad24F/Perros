@@ -21,7 +21,9 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.huellasseguras.R
+import com.example.huellasseguras.Screens.Collares.CollaresAdminScreen
 import com.example.huellasseguras.Screens.Map.MapScreen
+import com.example.huellasseguras.Screens.ganado.Ganado
 
 
 // --- Pantalla Principal (Home) ---
@@ -65,7 +67,7 @@ fun HomeScreen(navController: NavController) {
             when (selectedTab) {
                 0 -> MapScreen()
                 1 -> Ganado(navController)
-                2 -> CollaresAdminScreen( navController)
+                2 -> CollaresAdminScreen(navController)
                 3 -> ProfileScreen(navController)
             }
         }

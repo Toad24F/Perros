@@ -1,4 +1,4 @@
-package com.example.huellasseguras.Screens
+package com.example.huellasseguras.Screens.Collares
 
 import android.app.Activity
 import android.app.PendingIntent
@@ -322,9 +322,9 @@ fun NfcWriteScreen(pet: Pet, navController: NavController) {
  * MainActivity lo llama cuando detecta una etiqueta con el petId correcto.
  */
 object NfcWriteRegistry {
-    private val listeners = mutableMapOf<String, (android.nfc.Tag) -> Unit>()
+    private val listeners = mutableMapOf<String, (Tag) -> Unit>()
 
-    fun register(petId: String, listener: (android.nfc.Tag) -> Unit) {
+    fun register(petId: String, listener: (Tag) -> Unit) {
         listeners[petId] = listener
     }
 
@@ -332,7 +332,7 @@ object NfcWriteRegistry {
         listeners.remove(petId)
     }
 
-    fun dispatch(tag: android.nfc.Tag) {
+    fun dispatch(tag: Tag) {
         listeners.values.forEach { it(tag) }
     }
 }

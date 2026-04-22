@@ -1,7 +1,7 @@
 
 // ── NfcWriteScreenWrapper.kt ─────────────────────────────────────────────
 // Wrapper que carga la mascota antes de mostrar NfcWriteScreen
-package com.example.huellasseguras.Screens
+package com.example.huellasseguras.Screens.Collares
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
