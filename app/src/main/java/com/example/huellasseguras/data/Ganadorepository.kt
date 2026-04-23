@@ -6,12 +6,15 @@ import com.example.huellasseguras.Supabase.Supabase
 import com.example.huellasseguras.model.Ganado
 import com.example.huellasseguras.model.NewGanado
 import com.example.huellasseguras.model.OwnerPublicProfile
+import com.example.huellasseguras.model.ganadoLocation
+import com.example.huellasseguras.model.ganadoLocationRaw
 import io.github.jan.supabase.postgrest.from
+import io.github.jan.supabase.postgrest.query.Columns
 import io.github.jan.supabase.storage.storage
 
 class GanadoRepository {
 
-    // ── Registrar un animal nuevo ─────────────────────────────────────────────
+    //Registrar un animal nuevo
     // aretesMadre / aretesPadre: el usuario ingresa el ARETE (string) y aquí
     // resolvemos el UUID correspondiente antes de insertar.
     suspend fun agregarGanado(
@@ -42,11 +45,11 @@ class GanadoRepository {
         }
     }
 
-    // ── Cargar todo el ganado ─────────────────────────────────────────────────
+    //  Cargar todo el ganado
     suspend fun loadGanado(userId: String): Result<List<Ganado>> {
         return try {
             val lista = Supabase.client.from("ganado")
-                .select(){
+                .select() {
                     filter {
                         eq("user_id", userId)
                     }
@@ -59,7 +62,7 @@ class GanadoRepository {
         }
     }
 
-    // ── Cargar un animal por ID ───────────────────────────────────────────────
+    // Cargar un animal por ID
     suspend fun loadGanadoById(id: String): Result<Ganado> {
         return try {
             val animal = Supabase.client.from("ganado")
@@ -72,7 +75,7 @@ class GanadoRepository {
         }
     }
 
-    // ── Buscar ID a partir del arete ─────────────────────────────────────────
+    // Buscar ID a partir del arete
     private suspend fun resolverIdPorArete(arete: String): String? {
         return try {
             val result = Supabase.client.from("ganado")
@@ -81,21 +84,6 @@ class GanadoRepository {
             result.firstOrNull()?.id
         } catch (e: Exception) {
             null
-        }
-    }
-
-    // ── Actualizar peso (registro rápido desde historial) ─────────────────────
-    suspend fun actualizarPeso(id: String, nuevoPeso: Double): Result<Unit> {
-        return try {
-            Supabase.client.from("ganado").update(
-                { set("peso", nuevoPeso) }
-            ) {
-                filter { eq("id", id) }
-            }
-            Result.success(Unit)
-        } catch (e: Exception) {
-            e.printStackTrace()
-            Result.failure(e)
         }
     }
     suspend fun uploadGanadoPhoto(ganadoId: String, imageUri: Uri, context: Context): Result<String> {
@@ -151,6 +139,40 @@ class GanadoRepository {
             e.printStackTrace()
             // Si falla, devolver datos vacíos sin romper la pantalla
             Result.success(Pair("Dueño", null))
+        }
+    }
+    //funcion para cargar la ubicacion de las mascotas
+    suspend fun loadGanadoLocation(userId: String): Result<List<ganadoLocation>> {
+        Supabase.client
+        return try {
+            val response = Supabase.client
+                .from("ganado")
+                .select(
+                    columns = Columns.raw("id, nombre, tipo, foto_url, ubicaciones!inner(lat, lng)")
+                ) {
+                    filter {
+                        eq("user_id", userId)
+                    }
+                }
+                .decodeList<ganadoLocationRaw>()
+
+            val ganados = response.map { raw ->
+                // Tomamos la primera ubicación de la lista anidada
+                val ultimaPos = raw.ubicaciones.firstOrNull()
+                ganadoLocation(
+                    id = raw.id,
+                    nombre = raw.nombre,
+                    tipo = raw.tipo,
+                    lat = ultimaPos?.lat ?: 0.0,
+                    lng = ultimaPos?.lng ?: 0.0,
+                    foto_url = raw.foto_url
+                )
+            }
+
+            Result.success(ganados)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            Result.failure(e)
         }
     }
 }

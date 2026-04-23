@@ -76,12 +76,12 @@ import androidx.core.graphics.toColorInt
 import coil.compose.AsyncImage
 import com.example.huellasseguras.Notifications.NotificationHelper
 import com.example.huellasseguras.R
+import com.example.huellasseguras.data.GanadoRepository
 import com.example.huellasseguras.data.GeofenceRepository
-import com.example.huellasseguras.data.PetsRepository
 import com.example.huellasseguras.model.Geofence
 import com.example.huellasseguras.model.NewGeofence
-import com.example.huellasseguras.model.PetLocation
 import com.example.huellasseguras.model.UbicacionHistorial
+import com.example.huellasseguras.model.ganadoLocation
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
@@ -179,11 +179,11 @@ fun MapScreen() {
     val sharedPref = remember { context.getSharedPreferences("user_session", Context.MODE_PRIVATE) }
     val userId = remember { sharedPref.getString("user_id", "") ?: "" }
 
-    val petsRepository = remember { PetsRepository() }
+    val ganadoRepository = remember { GanadoRepository() }
     val geofenceRepository = remember { GeofenceRepository() }
 
-    val userPetLocation = remember { mutableStateListOf<PetLocation>() }
-    var selectedPet by remember { mutableStateOf<PetLocation?>(null) }
+    val userGanadoLocation = remember { mutableStateListOf< ganadoLocation>() }
+    var selectedGanado by remember { mutableStateOf< ganadoLocation?>(null) }
     var isLoading by remember { mutableStateOf(true) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var panelSize by remember { mutableStateOf(PanelSize.COLLAPSED) }
@@ -216,21 +216,21 @@ fun MapScreen() {
     LaunchedEffect(userId) {
         if (userId.isBlank()) return@LaunchedEffect
         while (true) {
-            petsRepository.loadPetsLocation(userId).onSuccess { pets ->
-                userPetLocation.clear()
-                userPetLocation.addAll(pets)
-                if (selectedPet == null && pets.isNotEmpty()) {
-                    selectedPet = pets[0]
+            ganadoRepository.loadGanadoLocation(userId).onSuccess { ganados ->
+                userGanadoLocation.clear()
+                userGanadoLocation.addAll(ganados)
+                if (selectedGanado == null && ganados.isNotEmpty()) {
+                    selectedGanado = ganados[0]
                     panelSize = PanelSize.MEDIUM
                 }
                 geofenceActivo?.let { gf ->
-                    pets.forEach { pet ->
-                        if (pet.id == gf.mascota_id) {
-                            val dist = distanciaMetros(pet.lat, pet.lng, gf.lat, gf.lng)
+                    ganados.forEach { ganado ->
+                        if (ganado.id == gf.ganado_id) {
+                            val dist = distanciaMetros(ganado.lat, ganado.lng, gf.lat, gf.lng)
                             val fuera = dist > gf.radio_metros
-                            val notificado = alertasEnviadas.contains(pet.id)
-                            if (fuera && !notificado) { NotificationHelper.sendGeofenceAlert(context, pet.nombre); alertasEnviadas.add(pet.id) }
-                            else if (!fuera && notificado) { alertasEnviadas.remove(pet.id); NotificationHelper.cancelGeofenceAlert(context, pet.nombre) }
+                            val notificado = alertasEnviadas.contains(ganado.id)
+                            if (fuera && !notificado) { NotificationHelper.sendGeofenceAlert(context, ganado.nombre); alertasEnviadas.add(ganado.id) }
+                            else if (!fuera && notificado) { alertasEnviadas.remove(ganado.id); NotificationHelper.cancelGeofenceAlert(context, ganado.nombre) }
                         }
                     }
                 }
@@ -240,17 +240,17 @@ fun MapScreen() {
         }
     }
 
-    LaunchedEffect(selectedPet) {
-        selectedPet?.let { pet ->
-            cameraPositionState.animate(CameraUpdateFactory.newLatLngZoom(LatLng(pet.lat, pet.lng), 15f), 1000)
-            geofenceRepository.getGeofence(pet.id).onSuccess { gf ->
+    LaunchedEffect(selectedGanado) {
+        selectedGanado?.let { ganado ->
+            cameraPositionState.animate(CameraUpdateFactory.newLatLngZoom(LatLng(ganado.lat, ganado.lng), 15f), 1000)
+            geofenceRepository.getGeofence(ganado.id).onSuccess { gf ->
                 geofenceActivo = gf
-                geofenceCenterTemp = gf?.let { LatLng(it.lat, it.lng) } ?: LatLng(pet.lat, pet.lng)
+                geofenceCenterTemp = gf?.let { LatLng(it.lat, it.lng) } ?: LatLng(ganado.lat, ganado.lng)
                 geofenceRadioTemp = gf?.radio_metros?.toFloat() ?: 100f
             }
             if (modoHeatmap) {
                 isLoadingHeatmap = true
-                geofenceRepository.getUbicacionesHistorial(pet.id).onSuccess { historialCompleto.clear(); historialCompleto.addAll(it) }
+                geofenceRepository.getUbicacionesHistorial(ganado.id).onSuccess { historialCompleto.clear(); historialCompleto.addAll(it) }
                 isLoadingHeatmap = false
             }
         }
@@ -258,9 +258,9 @@ fun MapScreen() {
 
     LaunchedEffect(modoHeatmap) {
         if (modoHeatmap) {
-            selectedPet?.let { pet ->
+            selectedGanado?.let { ganado ->
                 isLoadingHeatmap = true
-                geofenceRepository.getUbicacionesHistorial(pet.id).onSuccess { historialCompleto.clear(); historialCompleto.addAll(it) }
+                geofenceRepository.getUbicacionesHistorial(ganado.id).onSuccess { historialCompleto.clear(); historialCompleto.addAll(it) }
                 isLoadingHeatmap = false
             }
         } else { historialCompleto.clear() }
@@ -297,14 +297,14 @@ fun MapScreen() {
                     else panelSize = PanelSize.COLLAPSED
                 }
             ) {
-                userPetLocation.forEach { pet ->
-                    val icon = rememberPetMarkerIcon(context = context, photoUrl = pet.foto_url, borderColor = "#FF8CE2".toColorInt(), anchorColor = "#FF8CE2".toColorInt())
+                userGanadoLocation.forEach { ganado ->
+                    val icon = rememberPetMarkerIcon(context = context, photoUrl = ganado.foto_url, borderColor = "#FF8CE2".toColorInt(), anchorColor = "#FF8CE2".toColorInt())
                     icon?.let {
                         Marker(
-                            state = MarkerState(LatLng(pet.lat, pet.lng)),
-                            title = pet.nombre, snippet = "Tipo: ${pet.tipo}", icon = it,
+                            state = MarkerState(LatLng(ganado.lat, ganado.lng)),
+                            title = ganado.nombre, snippet = "Tipo: ${ganado.tipo}", icon = it,
                             anchor = Offset(0.5f, 1f),
-                            onClick = { selectedPet = pet; panelSize = PanelSize.MEDIUM; false }
+                            onClick = { selectedGanado = ganado; panelSize = PanelSize.MEDIUM; false }
                         )
                     }
                 }
@@ -365,7 +365,7 @@ fun MapScreen() {
                 verticalArrangement = Arrangement.spacedBy(8.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                selectedPet?.let {
+                selectedGanado?.let {
                     SmallFloatingActionButton(
                         onClick = { geofenceCenterTemp = LatLng(it.lat, it.lng); showGeofenceSheet = true },
                         containerColor = if (geofenceActivo != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
@@ -377,7 +377,7 @@ fun MapScreen() {
                 }
 
                 SmallFloatingActionButton(
-                    onClick = { if (selectedPet == null) errorMessage = "Selecciona una mascota primero" else showHeatmapSheet = true },
+                    onClick = { if (selectedGanado == null) errorMessage = "Selecciona una mascota primero" else showHeatmapSheet = true },
                     containerColor = if (modoHeatmap) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
                     shape = RoundedCornerShape(12.dp)
                 ) {
@@ -436,7 +436,7 @@ fun MapScreen() {
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            if (userPetLocation.isEmpty()) "Sin mascotas" else "${userPetLocation.size} mascota(s)",
+                            if (userGanadoLocation.isEmpty()) "Sin mascotas" else "${userGanadoLocation.size} mascota(s)",
                             style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold
                         )
                         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -453,7 +453,7 @@ fun MapScreen() {
                     if (panelSize != PanelSize.COLLAPSED) {
                         if (isLoading) {
                             LinearWavyProgressIndicator(Modifier.fillMaxWidth().padding(horizontal = 16.dp))
-                        } else if (userPetLocation.isEmpty()) {
+                        } else if (userGanadoLocation.isEmpty()) {
                             Box(Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
                                 Text("Sin mascotas con ubicación activa", color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f))
                             }
@@ -463,12 +463,12 @@ fun MapScreen() {
                                 verticalArrangement = Arrangement.spacedBy(8.dp),
                                 modifier = Modifier.fillMaxSize()
                             ) {
-                                items(userPetLocation) { pet ->
-                                    PetMapItem(
-                                        pet = pet,
-                                        isSelected = selectedPet?.id == pet.id,
-                                        hasGeofence = geofenceActivo?.mascota_id == pet.id,
-                                        onClick = { selectedPet = pet; panelSize = PanelSize.MEDIUM }
+                                items(userGanadoLocation) { ganado ->
+                                    ganadoMapItem(
+                                        ganado = ganado,
+                                        isSelected = selectedGanado?.id == ganado.id,
+                                        hasGeofence = geofenceActivo?.ganado_id == ganado.id,
+                                        onClick = { selectedGanado = ganado; panelSize = PanelSize.MEDIUM }
                                     )
                                 }
                             }
@@ -489,21 +489,21 @@ fun MapScreen() {
 
     if (showGeofenceSheet) {
         GeofenceBottomSheet(
-            petName = selectedPet?.nombre ?: "", centerTemp = geofenceCenterTemp,
+            ganadoName = selectedGanado?.nombre ?: "", centerTemp = geofenceCenterTemp,
             radioTemp = geofenceRadioTemp, geofenceExistente = geofenceActivo,
             onRadioChange = { geofenceRadioTemp = it },
             onSave = {
                 scope.launch {
                     val center = geofenceCenterTemp ?: return@launch
-                    geofenceRepository.saveGeofence(NewGeofence(mascota_id = selectedPet!!.id, user_id = userId, lat = center.latitude, lng = center.longitude, radio_metros = geofenceRadioTemp.toDouble()))
+                    geofenceRepository.saveGeofence(NewGeofence(ganado_id = selectedGanado!!.id, user_id = userId, lat = center.latitude, lng = center.longitude, radio_metros = geofenceRadioTemp.toDouble()))
                         .onSuccess { geofenceActivo = it; showGeofenceSheet = false }
                         .onFailure { errorMessage = "Error al guardar: ${it.message}" }
                 }
             },
             onDelete = {
                 scope.launch {
-                    selectedPet?.let { pet ->
-                        geofenceRepository.deleteGeofence(pet.id)
+                    selectedGanado?.let { ganado ->
+                        geofenceRepository.deleteGeofence(ganado.id)
                             .onSuccess { geofenceActivo = null; showGeofenceSheet = false }
                             .onFailure { errorMessage = "Error al eliminar: ${it.message}" }
                     }
@@ -515,15 +515,15 @@ fun MapScreen() {
 
     if (showHeatmapSheet) {
         HeatmapBottomSheet(
-            petName = selectedPet?.nombre ?: "", modoHeatmap = modoHeatmap, mostrarLineas = mostrarLineas,
+            ganadoName = selectedGanado?.nombre ?: "", modoHeatmap = modoHeatmap, mostrarLineas = mostrarLineas,
             intervalo = intervalo, totalPuntos = heatmapPoints.size, totalHistorial = historialCompleto.size,
             isLoading = isLoadingHeatmap, onToggleHeatmap = { modoHeatmap = it }, onToggleLineas = { mostrarLineas = it },
             onIntervaloChange = { intervalo = it },
             onRecargar = {
                 scope.launch {
-                    selectedPet?.let { pet ->
+                    selectedGanado?.let { ganado ->
                         isLoadingHeatmap = true
-                        geofenceRepository.getUbicacionesHistorial(pet.id)
+                        geofenceRepository.getUbicacionesHistorial(ganado.id)
                             .onSuccess { historialCompleto.clear(); historialCompleto.addAll(it) }
                             .onFailure { errorMessage = "Error al cargar: ${it.message}" }
                         isLoadingHeatmap = false
@@ -538,14 +538,14 @@ fun MapScreen() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HeatmapBottomSheet(
-    petName: String, modoHeatmap: Boolean, mostrarLineas: Boolean, intervalo: IntervaloHeatmap,
+    ganadoName: String, modoHeatmap: Boolean, mostrarLineas: Boolean, intervalo: IntervaloHeatmap,
     totalPuntos: Int, totalHistorial: Int, isLoading: Boolean,
     onToggleHeatmap: (Boolean) -> Unit, onToggleLineas: (Boolean) -> Unit,
     onIntervaloChange: (IntervaloHeatmap) -> Unit, onRecargar: () -> Unit, onDismiss: () -> Unit
 ) {
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp).padding(bottom = 32.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            Text("Mapa de calor · $petName", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            Text("Mapa de calor · $ganadoName", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
 
             Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)) {
                 Row(modifier = Modifier.fillMaxWidth().padding(12.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
@@ -612,12 +612,12 @@ fun HeatmapBottomSheet(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GeofenceBottomSheet(
-    petName: String, centerTemp: LatLng?, radioTemp: Float, geofenceExistente: Geofence?,
+    ganadoName: String, centerTemp: LatLng?, radioTemp: Float, geofenceExistente: Geofence?,
     onRadioChange: (Float) -> Unit, onSave: () -> Unit, onDelete: () -> Unit, onDismiss: () -> Unit
 ) {
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp).padding(bottom = 32.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            Text("Zona segura · $petName", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            Text("Zona segura · $ganadoName", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
             Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)) {
                 Row(modifier = Modifier.padding(12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                     Icon(painterResource(R.drawable.ic_map), null, Modifier.size(18.dp), tint = Color.Unspecified)
@@ -653,7 +653,7 @@ fun GeofenceBottomSheet(
 }
 
 @Composable
-fun PetMapItem(pet: PetLocation, isSelected: Boolean, hasGeofence: Boolean = false, onClick: () -> Unit) {
+fun ganadoMapItem(ganado: ganadoLocation, isSelected: Boolean, hasGeofence: Boolean = false, onClick: () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
         shape = RoundedCornerShape(12.dp),
@@ -661,17 +661,17 @@ fun PetMapItem(pet: PetLocation, isSelected: Boolean, hasGeofence: Boolean = fal
         border = if (isSelected) BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else null
     ) {
         Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            val iconRes = when (pet.tipo.lowercase()) { "perro" -> R.drawable.ic_dog; "gato" -> R.drawable.ic_cat; else -> R.drawable.ic_pet }
+            val iconRes = when (ganado.tipo.lowercase()) { "perro" -> R.drawable.ic_dog; "gato" -> R.drawable.ic_cat; else -> R.drawable.ic_pet }
             Box(Modifier.size(48.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surface), contentAlignment = Alignment.Center) {
-                if (!pet.foto_url.isNullOrBlank()) {
-                    AsyncImage(model = "${pet.foto_url}?", contentDescription = pet.nombre, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+                if (!ganado.foto_url.isNullOrBlank()) {
+                    AsyncImage(model = "${ganado.foto_url}?", contentDescription = ganado.nombre, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
                 } else {
-                    Icon(painterResource(iconRes), pet.nombre, Modifier.size(28.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Icon(painterResource(iconRes), ganado.nombre, Modifier.size(28.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
             Column(Modifier.weight(1f)) {
-                Text(pet.nombre, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
-                Text("${"%.4f".format(pet.lat)}, ${"%.4f".format(pet.lng)}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f))
+                Text(ganado.nombre, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+                Text("${"%.4f".format(ganado.lat)}, ${"%.4f".format(ganado.lng)}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f))
             }
             Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 if (hasGeofence) Surface(color = Color(0x2200C853), shape = RoundedCornerShape(4.dp)) { Text("🛡", style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)) }

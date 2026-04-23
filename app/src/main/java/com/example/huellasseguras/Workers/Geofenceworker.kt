@@ -12,7 +12,7 @@ import androidx.work.WorkerParameters
 import com.example.huellasseguras.Notifications.NotificationHelper
 import com.example.huellasseguras.Supabase.Supabase
 import com.example.huellasseguras.model.Geofence
-import com.example.huellasseguras.model.PetLocationRaw
+import com.example.huellasseguras.model.ganadoLocationRaw
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.query.Columns
@@ -49,21 +49,21 @@ class GeofenceWorker(
             if (geofences.isEmpty()) return Result.success()
 
             // 3. Obtener ubicaciones actuales de las mascotas
-            val ubicaciones = Supabase.client
-                .from("mascotas")
+            val ubicaciones  = Supabase.client
+                .from("ganado")
                 .select(
                     columns = Columns.raw("id, nombre, tipo, foto_url, ubicaciones!inner(lat, lng)")
                 ) {
                     filter { eq("user_id", userId) }
                 }
-                .decodeList<PetLocationRaw>()
+                .decodeList<ganadoLocationRaw>()
 
             // 4. Chequear cada geofence contra la ubicación de su mascota
             geofences.forEach { gf ->
-                val petRaw = ubicaciones.firstOrNull { it.id == gf.mascota_id }
+                val ganadoLocationRaw = ubicaciones.firstOrNull { it.id == gf.ganado_id }
                     ?: return@forEach
 
-                val ultimaUbicacion = petRaw.ubicaciones.firstOrNull()
+                val ultimaUbicacion = ganadoLocationRaw.ubicaciones.firstOrNull()
                     ?: return@forEach
 
                 val distancia = distanciaMetros(
@@ -72,7 +72,7 @@ class GeofenceWorker(
                 )
 
                 if (distancia > gf.radio_metros) {
-                    NotificationHelper.sendGeofenceAlert(applicationContext, petRaw.nombre)
+                    NotificationHelper.sendGeofenceAlert(applicationContext, ganadoLocationRaw.nombre)
                 }
             }
 

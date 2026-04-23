@@ -33,3 +33,25 @@ data class NewGanado(
     val padre_id: String? = null,    // UUID del registro padre (resuelto en el repo)}
     val user_id: String? = null
 )
+@Serializable
+data class ganadoLocation(
+    val id: String,
+    val nombre: String,
+    val tipo: String,
+    val lat: Double,
+    val lng: Double,
+    val foto_url: String? = null
+)
+@Serializable
+data class ganadoLocationRaw(
+    val id: String,
+    val nombre: String,
+    val tipo: String,
+    val foto_url: String? = null,
+    val ubicaciones: List<Ubicacion>
+)
+@Serializable
+data class Ubicacion(
+    val lat: Double,
+    val lng: Double
+)

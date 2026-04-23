@@ -10,12 +10,12 @@ import io.github.jan.supabase.postgrest.query.Order
 class GeofenceRepository {
 
     // Obtener geofence activo de una mascota
-    suspend fun getGeofence(mascotaId: String): Result<Geofence?> {
+    suspend fun getGeofence(ganadoId: String): Result<Geofence?> {
         return try {
             val result = Supabase.client.from("geofences")
                 .select {
                     filter {
-                        eq("mascota_id", mascotaId)
+                        eq("ganado_id", ganadoId)
                         eq("activo", true)
                     }
                 }
@@ -33,7 +33,7 @@ class GeofenceRepository {
             Supabase.client.from("geofences").update(
                 { set("activo", false) }
             ) {
-                filter { eq("mascota_id", geofence.mascota_id) }
+                filter { eq("ganado_id", geofence.ganado_id) }
             }
 
             // Insertar el nuevo
@@ -49,10 +49,10 @@ class GeofenceRepository {
     }
 
     // Eliminar geofence de una mascota
-    suspend fun deleteGeofence(mascotaId: String): Result<Unit> {
+    suspend fun deleteGeofence(ganadoId: String): Result<Unit> {
         return try {
             Supabase.client.from("geofences").delete {
-                filter { eq("mascota_id", mascotaId) }
+                filter { eq("ganado_id", ganadoId) }
             }
             Result.success(Unit)
         } catch (e: Exception) {
@@ -62,13 +62,13 @@ class GeofenceRepository {
 
     // Cargar historial de ubicaciones para heatmap
     suspend fun getUbicacionesHistorial(
-        mascotaId: String,
+        ganadoId: String,
         limite: Int = 500
     ): Result<List<UbicacionHistorial>> {
         return try {
             val result = Supabase.client.from("ubicaciones_historial")
                 .select {
-                    filter { eq("mascota_id", mascotaId) }
+                    filter { eq("ganado_id", ganadoId) }
                     order("timestamp", Order.DESCENDING)
                     limit(limite.toLong())
                 }

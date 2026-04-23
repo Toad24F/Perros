@@ -46,7 +46,6 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.example.huellasseguras.R
 import com.example.huellasseguras.data.GanadoRepository
-import com.example.huellasseguras.data.PetsRepository
 import com.example.huellasseguras.model.Ganado
 /**
  * Pantalla que se abre cuando alguien escanea el collar NFC de una mascota perdida.
@@ -56,7 +55,6 @@ import com.example.huellasseguras.model.Ganado
 @Composable
 fun GanadoFoundScreen(ganadoId: String) {
     val context = LocalContext.current
-    val petsRepository = remember { PetsRepository() }
     val ganadoRepository = remember { GanadoRepository() }
 
     var ganado by remember { mutableStateOf<Ganado?>(null) }
