@@ -81,13 +81,13 @@ import com.example.huellasseguras.model.Ganado
 import com.example.huellasseguras.model.MedicalRecord
 import kotlinx.coroutines.launch
 
-// ── Tipos de registro para ganado ─────────────────────────────────────────────
+// Tipos de registro para ganado
 val TIPOS_REGISTRO_GANADO = listOf(
     "Todos", "Vacuna", "Desparasitacion", "Antibiotico",
     "Vitamina", "Parto", "Peso", "Diagnostico", "Cirugia", "Consulta", "Otro"
 )
 
-// ── Color por tipo ────────────────────────────────────────────────────────────
+// Color por tipo
 fun colorPorTipoGanado(tipo: String): Color = when (tipo) {
     "Vacuna"         -> Color(0xFF4CAF50)
     "Desparasitacion"-> Color(0xFF2196F3)
@@ -97,16 +97,18 @@ fun colorPorTipoGanado(tipo: String): Color = when (tipo) {
     "Peso"           -> Color(0xFF9C27B0)
     "Diagnostico"    -> Color(0xFF00BCD4)
     "Cirugia"        -> Color(0xFFFF5722)
-    "Consulta"       -> Color(0xFF607D8B)
+    ""       -> Color(0xFF607D8B)
     else             -> Color(0xFF795548)
 }
 
-// ── Icono por tipo ────────────────────────────────────────────────────────────
+//  Icono por tipo
 fun iconoPorTipoGanado(tipo: String): Int = when (tipo) {
     "Vacuna"         -> R.drawable.ic_syringe
     "Desparasitacion"-> R.drawable.ic_deworming
     "Peso"           -> R.drawable.ic_scales
     "Antibiotico"    -> R.drawable.ic_syringe
+    "Diagnostico"    -> R.drawable.ic_diagnostic
+    "Consulta"       -> R.drawable.ic_diagnostic
     else             -> R.drawable.ic_pet
 }
 
@@ -174,7 +176,7 @@ fun GanadoDetailScreen(ganadoId: String, navController: NavController) {
     Scaffold(
         floatingActionButton = {
             // TODO: Navegar a AddMedicalRecordGanadoScreen cuando esté lista
-            FloatingActionButton(onClick = { /* navController.navigate("addMedicalRecord/$ganadoId") */ }) {
+            FloatingActionButton(onClick = { navController.navigate("addMedicalRecord/$ganadoId") }) {
                 Icon(Icons.Default.Add, "Agregar registro")
             }
         },
@@ -310,9 +312,7 @@ fun GanadoDetailScreen(ganadoId: String, navController: NavController) {
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 // Cabecera con foto editable
-// ─────────────────────────────────────────────────────────────────────────────
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun GanadoHeaderSection(ganado: Ganado?, ganadoRepository: GanadoRepository) {
@@ -405,9 +405,7 @@ fun GanadoHeaderSection(ganado: Ganado?, ganadoRepository: GanadoRepository) {
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 // Tarjeta de información básica del animal
-// ─────────────────────────────────────────────────────────────────────────────
 @Composable
 fun GanadoInfoCard(ganado: Ganado?) {
     Card(modifier = Modifier.fillMaxWidth()) {
@@ -450,9 +448,7 @@ private fun InfoChip(label: String, value: String) {
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 // Alerta de periodo de retiro
-// ─────────────────────────────────────────────────────────────────────────────
 @Composable
 fun RetiroAlertCard(registros: List<MedicalRecord>) {
     Card(
@@ -477,9 +473,7 @@ fun RetiroAlertCard(registros: List<MedicalRecord>) {
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 // Banner próximo recordatorio
-// ─────────────────────────────────────────────────────────────────────────────
 @Composable
 fun ReminderBannerWithButtonGanado(
     proxRecord    : MedicalRecord,
@@ -526,9 +520,7 @@ fun ReminderBannerWithButtonGanado(
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 // Grupo colapsable por tipo
-// ─────────────────────────────────────────────────────────────────────────────
 @Composable
 fun GanadoMedicalRecordGroup(tipo: String, registros: List<MedicalRecord>) {
     var expandido by remember { mutableStateOf(true) }
@@ -572,9 +564,7 @@ fun GanadoMedicalRecordGroup(tipo: String, registros: List<MedicalRecord>) {
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 // Item individual del historial (con campos veterinarios)
-// ─────────────────────────────────────────────────────────────────────────────
 @Composable
 fun GanadoMedicalRecordItem(record: MedicalRecord) {
     val context = LocalContext.current
@@ -605,7 +595,7 @@ fun GanadoMedicalRecordItem(record: MedicalRecord) {
                     Text(record.descripcion, style = MaterialTheme.typography.bodySmall)
                 }
 
-                // ── Campos veterinarios ────────────────────────────────────
+                // Campos veterinarios
                 if (!record.producto_aplicado.isNullOrEmpty()) {
                     VetInfoRow("Producto", record.producto_aplicado, color)
                 }
@@ -671,9 +661,7 @@ private fun VetInfoRow(label: String, value: String, color: Color) {
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 // Dialog de recordatorios
-// ─────────────────────────────────────────────────────────────────────────────
 @Composable
 fun RemindersDialogGanado(recordatorios: List<MedicalRecord>, onDismiss: () -> Unit) {
     Dialog(onDismissRequest = onDismiss) {

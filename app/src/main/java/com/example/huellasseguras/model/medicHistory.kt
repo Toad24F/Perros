@@ -5,7 +5,7 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class MedicalRecord(
     val id: String? = null,
-    val ganado_id: String,               // era pet_id, ahora apunta a ganado
+    val ganado_id: String,               // ahora apunta a ganado
     val tipo_registro: String,
     val titulo: String,
     val descripcion: String? = null,

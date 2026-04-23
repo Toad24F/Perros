@@ -35,6 +35,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import androidx.navigation.navDeepLink
 import androidx.work.WorkManager
+import com.example.huellasseguras.Screens.AddMedicalRecordScreen
 import com.example.huellasseguras.Screens.Auth.LoginScreen
 import com.example.huellasseguras.Screens.Auth.RegisterScreen
 import com.example.huellasseguras.Screens.Collares.NfcWriteRegistry
@@ -42,7 +43,6 @@ import com.example.huellasseguras.Screens.Collares.NfcWriteScreenWrapper
 import com.example.huellasseguras.Screens.HomeScreen
 import com.example.huellasseguras.Screens.PetFoundScreen
 import com.example.huellasseguras.Screens.ganado.AddGanadoScreen
-import com.example.huellasseguras.Screens.ganado.AddMedicalRecordScreen
 import com.example.huellasseguras.Screens.ganado.GanadoDetailScreen
 import com.example.huellasseguras.Workers.GeofenceWorker
 import com.example.huellasseguras.ui.theme.PerrosTheme
@@ -169,9 +169,9 @@ public fun AppNavigation() {
             val userId = sharedPref.getString("user_id", "") ?: ""
             AddGanadoScreen(navController, userId)
         }
-        composable("addMedicalRecord/{petId}") { backStackEntry ->
-            val petId = backStackEntry.arguments?.getString("petId") ?: ""
-            AddMedicalRecordScreen(petId = petId, navController = navController)
+        composable("addMedicalRecord/{ganadoId}") { backStackEntry ->
+            val ganadoId = backStackEntry.arguments?.getString("ganadoId") ?: ""
+            AddMedicalRecordScreen(ganadoId, navController)
         }
         composable(
             route = "petFound/{petId}",

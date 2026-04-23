@@ -37,6 +37,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SelectableDates
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDatePickerState
@@ -61,15 +62,31 @@ import com.example.huellasseguras.R
 import com.example.huellasseguras.data.GanadoRepository
 import com.example.huellasseguras.model.NewGanado
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import java.util.Date
+import java.util.Locale
 
 private val FECHA_FORMATTER: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddGanadoScreen(navController: NavController, userId: String) {
+    val datePickerState = rememberDatePickerState(
+        selectableDates = object : SelectableDates {
+            // Bloquea cualquier fecha mayor a la actual (en milisegundos)
+            override fun isSelectableDate(utcTimeMillis: Long): Boolean {
+                return utcTimeMillis <= System.currentTimeMillis()
+            }
+
+            // Bloquea también los años futuros en el selector de años
+            override fun isSelectableYear(year: Int): Boolean {
+                return year <= java.util.Calendar.getInstance().get(java.util.Calendar.YEAR)
+            }
+        }
+    )
     val scope = rememberCoroutineScope()
     val ganadoRepository = remember { GanadoRepository() }
     var imageUri by remember { mutableStateOf<Uri?>(null) }
@@ -91,6 +108,7 @@ fun AddGanadoScreen(navController: NavController, userId: String) {
     val datePickerStateFecha       = rememberDatePickerState()
     var fechaNacimiento             by remember { mutableStateOf(LocalDate.now().format(FECHA_FORMATTER)) }
     var padreId         by remember { mutableStateOf("") }
+
 
     // ── Estado UI ────────────────────────────────────────────────────────────
     var isLoading    by remember { mutableStateOf(false) }
@@ -312,6 +330,26 @@ fun AddGanadoScreen(navController: NavController, userId: String) {
 //                singleLine = true,
 //                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
 //            )
+            if (showDatePickerFecha) {
+                DatePickerDialog(
+                    onDismissRequest = { showDatePickerFecha = false },
+                    confirmButton = {
+                        TextButton(onClick = {
+                            datePickerState.selectedDateMillis?.let { millis ->
+                                // Convertimos los millis a formato legible (YYYY-MM-DD)
+                                fechaNacimiento = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+                                    .format(Date(millis))
+                            }
+                            showDatePickerFecha = false
+                        }) { Text("OK") }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { showDatePickerFecha = false }) { Text("Cancelar") }
+                    }
+                ) {
+                    DatePicker(state = datePickerState)
+                }
+            }
             OutlinedTextField(
                 value         = fechaNacimiento,
                 onValueChange = {},
@@ -324,6 +362,7 @@ fun AddGanadoScreen(navController: NavController, userId: String) {
                 },
                 modifier      = Modifier.fillMaxWidth()
             )
+
 
 
             // ── Genealogía (IDs de arete de madre/padre) ──────────────────────

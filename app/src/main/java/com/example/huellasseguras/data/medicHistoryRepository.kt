@@ -31,14 +31,21 @@ class medicHistoryRepository {
         context: Context
     ): Result<MedicalRecord> {
         return try {
+            // 1. Insertar el registro y obtener el ID generado
             val created = Supabase.client.from("historial_medico")
                 .insert(record) { select() }
                 .decodeSingle<MedicalRecord>()
 
+            // 2. Si hay documento, subirlo y actualizar la URL
             if (documentoUri != null && created.id != null) {
                 val uploadResult = uploadDocument(created.id, documentoUri, context)
-                uploadResult.onSuccess { url -> updateDocumentUrl(created.id, url) }
-                Result.success(created.copy(documento_url = uploadResult.getOrNull()))
+                uploadResult.onSuccess { url ->
+                    updateDocumentUrl(created.id, url)
+                }
+                val updated = created.copy(
+                    documento_url = uploadResult.getOrNull()
+                )
+                Result.success(updated)
             } else {
                 Result.success(created)
             }
@@ -48,7 +55,7 @@ class medicHistoryRepository {
         }
     }
 
-    // ── Subir documento a Supabase Storage ────────────────────────────────────
+    // ── Subir documento a Supabase Storage (mismo bucket) ────────────────────
     private suspend fun uploadDocument(
         recordId: String,
         documentoUri: Uri,
@@ -56,7 +63,9 @@ class medicHistoryRepository {
     ): Result<String> {
         return try {
             val bucket = Supabase.client.storage.from("historial_documentos")
-            val mimeType = context.contentResolver.getType(documentoUri) ?: "application/octet-stream"
+
+            val mimeType =
+                context.contentResolver.getType(documentoUri) ?: "application/octet-stream"
             val extension = when {
                 mimeType.contains("pdf")  -> "pdf"
                 mimeType.contains("png")  -> "png"
@@ -65,25 +74,30 @@ class medicHistoryRepository {
                 else -> "bin"
             }
             val fileName = "record_${recordId}.$extension"
+
             val bytes = context.contentResolver
                 .openInputStream(documentoUri)
                 ?.readBytes()
                 ?: throw Exception("No se pudo leer el archivo")
 
             bucket.upload(path = fileName, data = bytes) { upsert = true }
-            Result.success(bucket.publicUrl(fileName))
+
+            val url = bucket.publicUrl(fileName)
+            Result.success(url)
         } catch (e: Exception) {
             e.printStackTrace()
             Result.failure(e)
         }
     }
 
-    // ── Actualizar URL del documento ─────────────────────────────────────────
+    // ── Actualizar URL del documento en la tabla ─────────────────────────────
     private suspend fun updateDocumentUrl(recordId: String, url: String) {
         try {
             Supabase.client.from("historial_medico").update(
                 { set("documento_url", url) }
-            ) { filter { eq("id", recordId) } }
+            ) {
+                filter { eq("id", recordId) }
+            }
         } catch (e: Exception) {
             e.printStackTrace()
         }
