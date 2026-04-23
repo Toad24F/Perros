@@ -60,8 +60,8 @@ import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.example.huellasseguras.Bluetooth.BluetoothManager
 import com.example.huellasseguras.R
-import com.example.huellasseguras.data.PetsRepository
-import com.example.huellasseguras.model.Pet
+import com.example.huellasseguras.data.GanadoRepository
+import com.example.huellasseguras.model.Ganado
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -75,27 +75,27 @@ fun CollaresAdminScreen(navController: NavController) {
     val scope = rememberCoroutineScope()
 
     var showDeviceDialog by remember { mutableStateOf(false) }
-    var selectedPetForLinking by remember { mutableStateOf<Pet?>(null) }
+    var selectedPetForLinking by remember { mutableStateOf<Ganado?>(null) }
 
     // Estados de la UI
     var isScanning by remember { mutableStateOf(false) }
     var dispositivosEncontrados = remember { mutableStateListOf<BluetoothDevice>() } // Necesitarás importar android.bluetooth.BluetoothDevice
-    var mascotas = remember { mutableStateListOf<Pet>() }
-    var isLoadingMascotas by remember { mutableStateOf(true) }
+    var ganados = remember { mutableStateListOf<Ganado>() }
+    var isLoadingGanado by remember { mutableStateOf(true) }
 
     // Cargar mascotas al iniciar (usando tu repositorio existente)
-    val petsRepository = remember { PetsRepository() }
+    val GanadoRepository = remember { GanadoRepository() }
     val sharedPref = remember { context.getSharedPreferences("user_session", Context.MODE_PRIVATE) }
     val userId = sharedPref.getString("user_id", "") ?: ""
     val bleManager = remember { BluetoothManager(context) }
     val dispositivos = bleManager.dispositivosEncontrados
 
     LaunchedEffect(Unit) {
-        val result = petsRepository.loadPets(userId) // Asumiendo que tienes esta función en el repo
+        val result = GanadoRepository.loadGanado(userId) // Asumiendo que tienes esta función en el repo
         result.onSuccess {
-            mascotas.clear()
-            mascotas.addAll(it)
-            isLoadingMascotas = false
+            ganados.clear()
+            ganados.addAll(it)
+            isLoadingGanado = false
         }
     }
     // Control del Escaneo
@@ -164,26 +164,26 @@ fun CollaresAdminScreen(navController: NavController) {
                 }
             }
 
-            // --- SECCIÓN 2: LISTA DE MASCOTAS ---
+            // --- SECCIÓN 2: LISTA DE GANADO ---
             item {
                 Text("Tus Mascotas", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
             }
 
-            if (isLoadingMascotas) {
+            if (isLoadingGanado) {
                 item { LinearWavyProgressIndicator(modifier = Modifier.fillMaxWidth()) }
             }
 
-            items(mascotas) { pet ->
+            items(ganados) { ganado ->
                 CollarPetCard(
-                    pet = pet,
+                    ganado = ganado,
                     isScanning = isScanning,
                     onLinkClick = {
-                        // 👈 ACTUALIZADO: Guardamos la mascota y abrimos el diálogo
-                        selectedPetForLinking = pet
+                        // ACTUALIZADO: Guardamos la mascota y abrimos el diálogo
+                        selectedPetForLinking = ganado
                         showDeviceDialog = true
                         isScanning = true
                     },
-                    onNfcClick = { navController.navigate("nfcWrite/${pet.id}") }
+                    onNfcClick = { navController.navigate("nfcWrite/${ganado.id}") }
                 )
             }
 
@@ -244,7 +244,7 @@ fun CollaresAdminScreen(navController: NavController) {
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-fun CollarPetCard(pet: Pet, isScanning: Boolean, onLinkClick: () -> Unit, onNfcClick: () -> Unit) {
+fun CollarPetCard(ganado: Ganado, isScanning: Boolean, onLinkClick: () -> Unit, onNfcClick: () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
@@ -257,7 +257,7 @@ fun CollarPetCard(pet: Pet, isScanning: Boolean, onLinkClick: () -> Unit, onNfcC
             Box(modifier = Modifier.size(60.dp).clip(CircleShape).background(Color.LightGray)) {
                 CircularWavyProgressIndicator()
                 AsyncImage(
-                    model = pet.foto_url,
+                    model = ganado.foto_url,
                     contentDescription = null,
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop,
@@ -267,7 +267,7 @@ fun CollarPetCard(pet: Pet, isScanning: Boolean, onLinkClick: () -> Unit, onNfcC
             }
 
             Column(modifier = Modifier.weight(1f).padding(horizontal = 12.dp)) {
-                Text(text = pet.nombre, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
+                Text(text = ganado.nombre.toString(), style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
                 Text(
                     text = if (false) "Conectado al collar" else "Sin collar vinculado",
                     style = MaterialTheme.typography.labelMedium,

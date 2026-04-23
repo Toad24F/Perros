@@ -31,7 +31,7 @@ import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.ExposedDropdownMenuDefaults.TrailingIcon
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -102,6 +102,7 @@ fun AddGanadoScreen(navController: NavController, userId: String) {
     var tipoSeleccionado by remember { mutableStateOf("") }
     var razaSeleccionada by remember { mutableStateOf("") }
     var edad            by remember { mutableStateOf("") }
+    var sexo            by remember { mutableStateOf("") }
     var peso            by remember { mutableStateOf("") }
     var madreId         by remember { mutableStateOf("") }
     var showDatePickerFecha        by remember { mutableStateOf(false) }
@@ -234,7 +235,7 @@ fun AddGanadoScreen(navController: NavController, userId: String) {
                     readOnly = true,
                     label = { Text("Tipo de ganado *") },
                     trailingIcon = {
-                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedTipo)
+                        TrailingIcon(expanded = expandedTipo)
                     },
                     modifier = Modifier
                         .menuAnchor()
@@ -271,7 +272,7 @@ fun AddGanadoScreen(navController: NavController, userId: String) {
                         readOnly = true,
                         label = { Text("Raza *") },
                         trailingIcon = {
-                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedRaza)
+                            TrailingIcon(expanded = expandedRaza)
                         },
                         modifier = Modifier
                             .menuAnchor()
@@ -294,7 +295,43 @@ fun AddGanadoScreen(navController: NavController, userId: String) {
                     }
                 }
             }
+            var expanded by remember { mutableStateOf(false) }
+            val opcionesSexo = listOf("Macho", "Hembra")
 
+            ExposedDropdownMenuBox(
+                expanded = expanded,
+                onExpandedChange = { expanded = !expanded }
+            ) {
+
+                OutlinedTextField(
+                    value = sexo,
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text("Sexo") },
+                    trailingIcon = {
+                        TrailingIcon(expanded = expanded)
+                    },
+                    modifier = Modifier
+                        .menuAnchor()
+                        .fillMaxWidth()
+                )
+
+                ExposedDropdownMenu(
+                    expanded = expanded,
+                    onDismissRequest = { expanded = false }
+                ) {
+
+                    opcionesSexo.forEach { opcion ->
+                        DropdownMenuItem(
+                            text = { Text(opcion) },
+                            onClick = {
+                                sexo = opcion
+                                expanded = false
+                            }
+                        )
+                    }
+                }
+            }
             // ── Edad y Peso ────────────────────────────────────────────────────
             Row(
                 modifier = Modifier.fillMaxWidth(),

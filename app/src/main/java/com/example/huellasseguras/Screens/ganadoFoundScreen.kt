@@ -45,32 +45,34 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.example.huellasseguras.R
+import com.example.huellasseguras.data.GanadoRepository
 import com.example.huellasseguras.data.PetsRepository
-import com.example.huellasseguras.model.Pet
-
+import com.example.huellasseguras.model.Ganado
 /**
  * Pantalla que se abre cuando alguien escanea el collar NFC de una mascota perdida.
  * Muestra los datos de la mascota y el contacto del dueño.
  * Accesible sin login — la información es pública por diseño.
  */
 @Composable
-fun PetFoundScreen(petId: String) {
+fun GanadoFoundScreen(ganadoId: String) {
     val context = LocalContext.current
     val petsRepository = remember { PetsRepository() }
+    val ganadoRepository = remember { GanadoRepository() }
 
-    var pet by remember { mutableStateOf<Pet?>(null) }
+    var ganado by remember { mutableStateOf<Ganado?>(null) }
     var ownerName by remember { mutableStateOf<String?>(null) }
     var ownerPhone by remember { mutableStateOf<String?>(null) }
     var isLoading by remember { mutableStateOf(true) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
-    LaunchedEffect(petId) {
+    LaunchedEffect(ganadoId) {
         // Cargar datos de la mascota
-        petsRepository.loadPetData(petId)
-            .onSuccess { loadedPet ->
-                pet = loadedPet
+        ganadoRepository.loadGanadoById(ganadoId)
+
+            .onSuccess { underloaded ->
+                ganado = underloaded
                 // Cargar datos públicos del dueño usando el user_id de la mascota
-                petsRepository.loadOwnerPublicData(loadedPet.user_id)
+                ganadoRepository.loadOwnerPublicData(underloaded.user_id)
                     .onSuccess { ownerData ->
                         ownerName = ownerData.first
                         ownerPhone = ownerData.second
@@ -111,7 +113,7 @@ fun PetFoundScreen(petId: String) {
                     )
                 }
             }
-            pet != null -> {
+            ganado != null -> {
 //                // Banner "¡MASCOTA ENCONTRADA!"
 //                Card(
 //                    modifier = Modifier.fillMaxWidth(),
@@ -153,15 +155,15 @@ fun PetFoundScreen(petId: String) {
                         .border(4.dp, MaterialTheme.colorScheme.primary, CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
-                    if (!pet!!.foto_url.isNullOrBlank()) {
+                    if (!ganado!!.foto_url.isNullOrBlank()) {
                         AsyncImage(
-                            model = pet!!.foto_url,
-                            contentDescription = pet!!.nombre,
+                            model = ganado!!.foto_url,
+                            contentDescription = ganado!!.nombre,
                             modifier = Modifier.fillMaxSize(),
                             contentScale = ContentScale.Crop
                         )
                     } else {
-                        val iconRes = when (pet!!.tipo.lowercase()) {
+                        val iconRes = when (ganado!!.tipo.lowercase()) {
                             "perro" -> R.drawable.ic_dog
                             "gato" -> R.drawable.ic_cat
                             else -> R.drawable.ic_pet
@@ -179,12 +181,12 @@ fun PetFoundScreen(petId: String) {
 
                 // Nombre de la mascota
                 Text(
-                    text = pet!!.nombre,
+                    text = ganado!!.nombre.toString(),
                     style = MaterialTheme.typography.displaySmall,
                     fontWeight = FontWeight.ExtraBold
                 )
                 Text(
-                    text = "${pet!!.tipo}${if (!pet!!.raza.isNullOrBlank()) " · ${pet!!.raza}" else ""}",
+                    text = "${ganado!!.tipo}${if (!ganado!!.raza.isNullOrBlank()) " · ${ganado!!.raza}" else ""}",
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                 )
@@ -210,20 +212,20 @@ fun PetFoundScreen(petId: String) {
 
                         InfoRow(
                             label = "Sexo",
-                            value = pet!!.sexo,
+                            value = ganado!!.sexo,
                             icon = R.drawable.ic_pet
                         )
                         Spacer(Modifier.height(10.dp))
                         InfoRow(
                             label = "Edad",
-                            value = "${pet!!.edad ?: "?"} años",
+                            value = "${ganado!!.edad ?: "?"} años",
                             icon = R.drawable.ic_pet
                         )
-                        if (pet!!.peso != null) {
+                        if (ganado!!.peso != null) {
                             Spacer(Modifier.height(10.dp))
                             InfoRow(
                                 label = "Peso",
-                                value = "${pet!!.peso} kg",
+                                value = "${ganado!!.peso} kg",
                                 icon = R.drawable.ic_pet
                             )
                         }
@@ -318,7 +320,7 @@ fun PetFoundScreen(petId: String) {
 }
 
 @Composable
-private fun InfoRow(label: String, value: String, icon: Int) {
+private fun InfoRow(label: String, value: String?, icon: Int) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Icon(
             painter = painterResource(id = icon),
@@ -332,10 +334,12 @@ private fun InfoRow(label: String, value: String, icon: Int) {
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
         )
-        Text(
-            text = value,
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.SemiBold
-        )
+        if (value != null) {
+            Text(
+                text = value,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+        }
     }
 }

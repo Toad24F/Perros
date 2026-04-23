@@ -13,14 +13,14 @@ import android.nfc.tech.NdefFormatable
  */
 object NfcManager {
 
-    private const val DEEP_LINK_SCHEME = "huellaliza://mascota/"
+    private const val DEEP_LINK_SCHEME = "huellaliza://ganado/"
 
     /**
      * Escribe el deep link de la mascota en la etiqueta NFC.
      * Funciona con etiquetas ya formateadas (Ndef) y sin formatear (NdefFormatable).
      */
-    fun writeToTag(tag: Tag, petId: String): Result<Unit> {
-        val uri = "$DEEP_LINK_SCHEME$petId"
+    fun writeToTag(tag: Tag, ganadoId: String): Result<Unit> {
+        val uri = "$DEEP_LINK_SCHEME$ganadoId"
         return try {
             val record = NdefRecord.createUri(uri)
             val message = NdefMessage(arrayOf(record))

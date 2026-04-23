@@ -40,8 +40,8 @@ import com.example.huellasseguras.Screens.Auth.LoginScreen
 import com.example.huellasseguras.Screens.Auth.RegisterScreen
 import com.example.huellasseguras.Screens.Collares.NfcWriteRegistry
 import com.example.huellasseguras.Screens.Collares.NfcWriteScreenWrapper
+import com.example.huellasseguras.Screens.GanadoFoundScreen
 import com.example.huellasseguras.Screens.HomeScreen
-import com.example.huellasseguras.Screens.PetFoundScreen
 import com.example.huellasseguras.Screens.ganado.AddGanadoScreen
 import com.example.huellasseguras.Screens.ganado.GanadoDetailScreen
 import com.example.huellasseguras.Workers.GeofenceWorker
@@ -174,22 +174,22 @@ public fun AppNavigation() {
             AddMedicalRecordScreen(ganadoId, navController)
         }
         composable(
-            route = "petFound/{petId}",
+            route = "petFound/{ganadoId}",
             deepLinks = listOf(
                 navDeepLink {
                     // Esto le dice a Compose: "Si llega un Intent con esta URL, abre esta pantalla"
-                    uriPattern = "huellaliza://mascota/{petId}"
+                    uriPattern = "huellaliza://ganado/{ganadoId}"
                 }
             )
         ) { backStackEntry ->
-            val petId = backStackEntry.arguments?.getString("petId") ?: ""
-            PetFoundScreen(petId = petId)
+            val ganadoId = backStackEntry.arguments?.getString("ganadoId") ?: ""
+            GanadoFoundScreen(ganadoId = ganadoId,)
         }
 
-        composable("nfcWrite/{petId}") { backStackEntry ->
-            val petId = backStackEntry.arguments?.getString("petId") ?: ""
+        composable("nfcWrite/{ganadoId}") { backStackEntry ->
+            val ganadoId = backStackEntry.arguments?.getString("ganadoId") ?: ""
             // Necesitas cargar la mascota primero
-            NfcWriteScreenWrapper(petId = petId, navController = navController)
+            NfcWriteScreenWrapper(ganadoId = ganadoId, navController = navController)
         }
         composable(
             route = "registro",

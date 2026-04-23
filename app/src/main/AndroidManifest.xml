@@ -66,7 +66,7 @@
             <intent-filter>
                 <action android:name="android.nfc.action.NDEF_DISCOVERED" />
                 <category android:name="android.intent.category.DEFAULT" />
-                <data android:scheme="huellaliza" android:host="mascota" />
+                <data android:scheme="huellaliza" android:host="ganado" />
             </intent-filter>
         </activity>
 

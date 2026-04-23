@@ -16,19 +16,19 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavController
-import com.example.huellasseguras.data.PetsRepository
-import com.example.huellasseguras.model.Pet
+import com.example.huellasseguras.data.GanadoRepository
+import com.example.huellasseguras.model.Ganado
 
 @Composable
-fun NfcWriteScreenWrapper(petId: String, navController: NavController) {
-    val petsRepository = remember { PetsRepository() }
-    var pet by remember { mutableStateOf<Pet?>(null) }
+fun NfcWriteScreenWrapper(ganadoId: String, navController: NavController) {
+    val GanadoRepository = remember { GanadoRepository() }
+    var ganado by remember { mutableStateOf<Ganado?>(null) }
     var isLoading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
 
-    LaunchedEffect(petId) {
-        petsRepository.loadPetData(petId)
-            .onSuccess { pet = it }
+    LaunchedEffect(ganadoId) {
+        GanadoRepository.loadGanadoById(ganadoId)
+            .onSuccess { ganado = it }
             .onFailure { error = it.message }
         isLoading = false
     }
@@ -40,6 +40,6 @@ fun NfcWriteScreenWrapper(petId: String, navController: NavController) {
         error != null -> Box(Modifier.fillMaxSize(), Alignment.Center) {
             Text("Error: $error")
         }
-        pet != null -> NfcWriteScreen(pet = pet!!, navController = navController)
+        ganado != null -> NfcWriteScreen(ganado = ganado!!, navController = navController)
     }
 }

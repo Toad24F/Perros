@@ -5,6 +5,7 @@ import android.net.Uri
 import com.example.huellasseguras.Supabase.Supabase
 import com.example.huellasseguras.model.Ganado
 import com.example.huellasseguras.model.NewGanado
+import com.example.huellasseguras.model.OwnerPublicProfile
 import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.storage.storage
 
@@ -128,6 +129,28 @@ class GanadoRepository {
             true
         } catch (e: Exception) {
             false
+        }
+    }
+    suspend fun loadOwnerPublicData(userId: String): Result<Pair<String, String?>> {
+        return try {
+            // Llamar a una función RPC pública de Supabase que devuelve nombre y teléfono
+            // Esta función debe crearse en Supabase (ver SQL más abajo)
+            val result = Supabase.client
+                .from("owner_public_profiles")
+                .select {
+                    filter { eq("user_id", userId) }
+                }
+                .decodeList<OwnerPublicProfile>()
+
+            val profile = result.firstOrNull()
+            Result.success(Pair(
+                profile?.owner_name ?: "Dueño",
+                profile?.owner_phone
+            ))
+        } catch (e: Exception) {
+            e.printStackTrace()
+            // Si falla, devolver datos vacíos sin romper la pantalla
+            Result.success(Pair("Dueño", null))
         }
     }
 }

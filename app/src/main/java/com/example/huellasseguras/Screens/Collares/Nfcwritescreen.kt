@@ -52,13 +52,13 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.huellasseguras.Nfc.NfcManager
 import com.example.huellasseguras.R
-import com.example.huellasseguras.model.Pet
+import com.example.huellasseguras.model.Ganado
 
 private enum class NfcWriteState { WAITING, SUCCESS, ERROR, NO_NFC }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun NfcWriteScreen(pet: Pet, navController: NavController) {
+fun NfcWriteScreen(ganado: Ganado, navController: NavController) {
     val context = LocalContext.current
     val activity = context as? Activity
 
@@ -102,7 +102,7 @@ fun NfcWriteScreen(pet: Pet, navController: NavController) {
         // Intent para que el sistema nos avise cuando detecte una etiqueta
         val intent = Intent(activity, activity::class.java).apply {
             addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
-            putExtra("NFC_WRITE_PET_ID", pet.id)
+            putExtra("NFC_WRITE_GANADO_ID", ganado.id)
         }
         val pendingIntent = PendingIntent.getActivity(
             activity, 0, intent,
@@ -119,7 +119,7 @@ fun NfcWriteScreen(pet: Pet, navController: NavController) {
     // Se registra en el LocalActivity a través del intent extra "NFC_TAG"
     DisposableEffect(Unit) {
         val listener: (Tag) -> Unit = { tag ->
-            val result = NfcManager.writeToTag(tag, pet.id)
+            val result = NfcManager.writeToTag(tag, ganado.id)
             writeState = if (result.isSuccess) {
                 NfcWriteState.SUCCESS
             } else {
@@ -127,8 +127,8 @@ fun NfcWriteScreen(pet: Pet, navController: NavController) {
                 NfcWriteState.ERROR
             }
         }
-        NfcWriteRegistry.register(pet.id, listener)
-        onDispose { NfcWriteRegistry.unregister(pet.id) }
+        NfcWriteRegistry.register(ganado.id, listener)
+        onDispose { NfcWriteRegistry.unregister(ganado.id) }
     }
 
     Scaffold(
@@ -184,7 +184,7 @@ fun NfcWriteScreen(pet: Pet, navController: NavController) {
                     Spacer(modifier = Modifier.height(12.dp))
 
                     Text(
-                        text = "Se configurará para mostrar los datos de ${pet.nombre}",
+                        text = "Se configurará para mostrar los datos de ${ganado.nombre}",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                         textAlign = TextAlign.Center
@@ -231,7 +231,7 @@ fun NfcWriteScreen(pet: Pet, navController: NavController) {
                     Spacer(modifier = Modifier.height(12.dp))
 
                     Text(
-                        text = "El collar de ${pet.nombre} ya puede ser escaneado.\n" +
+                        text = "El collar de ${ganado.nombre} ya puede ser escaneado.\n" +
                                 "Cualquier usuario con la app puede acercar su teléfono " +
                                 "al collar para ver su información.",
                         style = MaterialTheme.typography.bodyMedium,
@@ -324,12 +324,12 @@ fun NfcWriteScreen(pet: Pet, navController: NavController) {
 object NfcWriteRegistry {
     private val listeners = mutableMapOf<String, (Tag) -> Unit>()
 
-    fun register(petId: String, listener: (Tag) -> Unit) {
-        listeners[petId] = listener
+    fun register(ganadoId: String, listener: (Tag) -> Unit) {
+        listeners[ganadoId] = listener
     }
 
-    fun unregister(petId: String) {
-        listeners.remove(petId)
+    fun unregister(ganadiId: String) {
+        listeners.remove(ganadiId)
     }
 
     fun dispatch(tag: Tag) {
