@@ -1,7 +1,6 @@
 package com.example.huellasseguras.Screens.Map
 
 import android.Manifest
-import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Matrix
@@ -108,6 +107,8 @@ import kotlin.math.pow
 import kotlin.math.sin
 import kotlin.math.sqrt
 
+// Enums de UI
+
 enum class IntervaloHeatmap(val label: String, val horas: Int?) {
     TODO("Todo el historial", null),
     HORA_1("Última hora", 1),
@@ -122,22 +123,29 @@ enum class PanelSize(val height: Dp) {
     EXPANDED(380.dp)
 }
 
+//Utilidades de mapa
+
 fun distanciaMetros(lat1: Double, lng1: Double, lat2: Double, lng2: Double): Double {
     val r = 6371000.0
     val dLat = Math.toRadians(lat2 - lat1)
     val dLng = Math.toRadians(lng2 - lng1)
-    val a = sin(dLat / 2).pow(2) + cos(Math.toRadians(lat1)) * cos(Math.toRadians(lat2)) * sin(dLng / 2).pow(2)
+    val a = sin(dLat / 2).pow(2) +
+            cos(Math.toRadians(lat1)) * cos(Math.toRadians(lat2)) * sin(dLng / 2).pow(2)
     return r * 2 * atan2(sqrt(a), sqrt(1 - a))
 }
 
-fun filtrarPorIntervalo(historial: List<UbicacionHistorial>, intervalo: IntervaloHeatmap): List<LatLng> {
+fun filtrarPorIntervalo(
+    historial: List<UbicacionHistorial>,
+    intervalo: IntervaloHeatmap
+): List<LatLng> {
     if (historial.isEmpty()) return emptyList()
     val lista = if (intervalo.horas == null) historial else {
         val limiteMs = System.currentTimeMillis() - (intervalo.horas * 3600 * 1000L)
         historial.filter { punto ->
             try {
                 val ts = punto.timestamp ?: return@filter true
-                val norm = ts.replace(" ", "T").let { if (!it.endsWith("Z") && !it.contains("+")) "${it}Z" else it }
+                val norm = ts.replace(" ", "T")
+                    .let { if (!it.endsWith("Z") && !it.contains("+")) "${it}Z" else it }
                 java.time.Instant.parse(norm).toEpochMilli() >= limiteMs
             } catch (e: Exception) { true }
         }
@@ -148,8 +156,12 @@ fun filtrarPorIntervalo(historial: List<UbicacionHistorial>, intervalo: Interval
 fun crearFlechaBitmap(anguloDeg: Float, color: Int, tamano: Int = 48): Bitmap {
     val bmp = Bitmap.createBitmap(tamano, tamano, Bitmap.Config.ARGB_8888)
     val canvas = Canvas(bmp)
-    val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply { this.color = color; style = Paint.Style.FILL }
-    val cx = tamano / 2f; val cy = tamano / 2f
+    val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        this.color = color
+        style = Paint.Style.FILL
+    }
+    val cx = tamano / 2f
+    val cy = tamano / 2f
     val path = android.graphics.Path().apply {
         moveTo(cx, 0f)
         lineTo(cx - tamano * 0.3f, tamano.toFloat())
@@ -157,247 +169,419 @@ fun crearFlechaBitmap(anguloDeg: Float, color: Int, tamano: Int = 48): Bitmap {
         lineTo(cx + tamano * 0.3f, tamano.toFloat())
         close()
     }
-    val matrix = Matrix()
-    matrix.postRotate(anguloDeg, cx, cy)
+    val matrix = Matrix().also { it.postRotate(anguloDeg, cx, cy) }
     path.transform(matrix)
     canvas.drawPath(path, paint)
     return bmp
 }
 
 fun anguloDesdePuntos(desde: LatLng, hacia: LatLng): Float {
-    // Para voltear 180 grados, restamos el origen del destino (o viceversa si ya estaba así)
     val dLng = desde.longitude - hacia.longitude
     val dLat = desde.latitude - hacia.latitude
     return Math.toDegrees(atan2(dLng, dLat)).toFloat()
 }
 
-@OptIn(ExperimentalPermissionsApi::class, ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
+//Icono según especie de ganado
+private fun iconoPorTipo(tipo: String): Int = when (tipo.lowercase()) {
+    "bovino"  -> R.drawable.ic_bovino
+    "porcino" -> R.drawable.ic_porcino
+    "ovino"   -> R.drawable.ic_ovino
+    "caprino" -> R.drawable.ic_caprino
+    "equino"  -> R.drawable.ic_equino
+    else      -> R.drawable.ic_pet
+}
+
+//Pantalla principal del mapa
+
+@OptIn(ExperimentalPermissionsApi::class, ExperimentalMaterial3Api::class,
+    ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun MapScreen() {
-    val context = LocalContext.current
-    val scope = rememberCoroutineScope()
-    val sharedPref = remember { context.getSharedPreferences("user_session", Context.MODE_PRIVATE) }
-    val userId = remember { sharedPref.getString("user_id", "") ?: "" }
+    val context       = LocalContext.current
+    val scope         = rememberCoroutineScope()
+    val sharedPref    = remember { context.getSharedPreferences("user_session", android.content.Context.MODE_PRIVATE) }
+    val userId        = remember { sharedPref.getString("user_id", "") ?: "" }
 
-    val ganadoRepository = remember { GanadoRepository() }
+    // Repositorios — se usan los ya existentes en el proyecto
+    val ganadoRepository  = remember { GanadoRepository() }
     val geofenceRepository = remember { GeofenceRepository() }
 
-    val userGanadoLocation = remember { mutableStateListOf< ganadoLocation>() }
-    var selectedGanado by remember { mutableStateOf< ganadoLocation?>(null) }
-    var isLoading by remember { mutableStateOf(true) }
-    var errorMessage by remember { mutableStateOf<String?>(null) }
-    var panelSize by remember { mutableStateOf(PanelSize.COLLAPSED) }
-    val panelHeight by animateDpAsState(targetValue = panelSize.height, label = "panel")
+    // Estado principal de ubicaciones
+    val ganadoEnMapa = remember { mutableStateListOf<ganadoLocation>() }
+    var selectedGanado by remember { mutableStateOf<ganadoLocation?>(null) }
+    var isLoading     by remember { mutableStateOf(true) }
+    var errorMessage  by remember { mutableStateOf<String?>(null) }
 
-    var modoHeatmap by remember { mutableStateOf(false) }
-    var mostrarLineas by remember { mutableStateOf(true) }
-    var intervalo by remember { mutableStateOf(IntervaloHeatmap.HORAS_24) }
-    var showHeatmapSheet by remember { mutableStateOf(false) }
-    var isLoadingHeatmap by remember { mutableStateOf(false) }
+    // Panel inferior
+    var panelSize     by remember { mutableStateOf(PanelSize.COLLAPSED) }
+    val panelHeight   by animateDpAsState(targetValue = panelSize.height, label = "panel")
+
+    // Heatmap / recorrido
+    var modoHeatmap       by remember { mutableStateOf(false) }
+    var mostrarLineas     by remember { mutableStateOf(true) }
+    var intervalo         by remember { mutableStateOf(IntervaloHeatmap.HORAS_24) }
+    var showHeatmapSheet  by remember { mutableStateOf(false) }
+    var isLoadingHeatmap  by remember { mutableStateOf(false) }
     val historialCompleto = remember { mutableStateListOf<UbicacionHistorial>() }
     val heatmapPoints = remember(historialCompleto.toList(), intervalo) {
         filtrarPorIntervalo(historialCompleto, intervalo)
     }
 
-    var geofenceActivo by remember { mutableStateOf<Geofence?>(null) }
+    // Geofence
+    var geofenceActivo    by remember { mutableStateOf<Geofence?>(null) }
     var showGeofenceSheet by remember { mutableStateOf(false) }
     var geofenceCenterTemp by remember { mutableStateOf<LatLng?>(null) }
-    var geofenceRadioTemp by remember { mutableStateOf(100f) }
-    val alertasEnviadas = remember { mutableSetOf<String>() }
+    var geofenceRadioTemp  by remember { mutableStateOf(100f) }
+    val alertasEnviadas   = remember { mutableSetOf<String>() }
 
-    val isDarkTheme = isSystemInDarkTheme()
+    // Cámara y ubicación del usuario
+    val isDarkTheme        = isSystemInDarkTheme()
     val locationPermission = rememberPermissionState(Manifest.permission.ACCESS_FINE_LOCATION)
     val cameraPositionState = rememberCameraPositionState()
-    var hasMovedCamera by remember { mutableStateOf(false) }
-    var userLocation by remember { mutableStateOf<LatLng?>(null) }
+    var hasMovedCamera     by remember { mutableStateOf(false) }
+    var userLocation       by remember { mutableStateOf<LatLng?>(null) }
 
+    // Crear canal de notificaciones al arrancar
     LaunchedEffect(Unit) { NotificationHelper.createChannel(context) }
 
+    // Polling de ubicaciones cada 5 segundos
     LaunchedEffect(userId) {
         if (userId.isBlank()) return@LaunchedEffect
         while (true) {
             ganadoRepository.loadGanadoLocation(userId).onSuccess { ganados ->
-                userGanadoLocation.clear()
-                userGanadoLocation.addAll(ganados)
+                ganadoEnMapa.clear()
+                ganadoEnMapa.addAll(ganados)
+
+                // Seleccionar el primero automáticamente al entrar
                 if (selectedGanado == null && ganados.isNotEmpty()) {
                     selectedGanado = ganados[0]
                     panelSize = PanelSize.MEDIUM
                 }
+
+                // Verificar alertas de geofence para cada animal
                 geofenceActivo?.let { gf ->
                     ganados.forEach { ganado ->
                         if (ganado.id == gf.ganado_id) {
                             val dist = distanciaMetros(ganado.lat, ganado.lng, gf.lat, gf.lng)
                             val fuera = dist > gf.radio_metros
                             val notificado = alertasEnviadas.contains(ganado.id)
-                            if (fuera && !notificado) { NotificationHelper.sendGeofenceAlert(context, ganado.nombre); alertasEnviadas.add(ganado.id) }
-                            else if (!fuera && notificado) { alertasEnviadas.remove(ganado.id); NotificationHelper.cancelGeofenceAlert(context, ganado.nombre) }
+                            if (fuera && !notificado) {
+                                NotificationHelper.sendGeofenceAlert(context, ganado.nombre)
+                                alertasEnviadas.add(ganado.id)
+                            } else if (!fuera && notificado) {
+                                alertasEnviadas.remove(ganado.id)
+                                NotificationHelper.cancelGeofenceAlert(context, ganado.nombre)
+                            }
                         }
                     }
                 }
             }.onFailure { errorMessage = it.message }
+
             isLoading = false
             delay(5000)
         }
     }
 
+    //Al cambiar animal seleccionado
     LaunchedEffect(selectedGanado) {
-        selectedGanado?.let { ganado ->
-            cameraPositionState.animate(CameraUpdateFactory.newLatLngZoom(LatLng(ganado.lat, ganado.lng), 15f), 1000)
-            geofenceRepository.getGeofence(ganado.id).onSuccess { gf ->
+        selectedGanado?.let { animal ->
+            cameraPositionState.animate(
+                CameraUpdateFactory.newLatLngZoom(LatLng(animal.lat, animal.lng), 15f), 1000
+            )
+            // Cargar su geofence activo
+            geofenceRepository.getGeofence(animal.id).onSuccess { gf ->
                 geofenceActivo = gf
-                geofenceCenterTemp = gf?.let { LatLng(it.lat, it.lng) } ?: LatLng(ganado.lat, ganado.lng)
+                geofenceCenterTemp = gf?.let { LatLng(it.lat, it.lng) }
+                    ?: LatLng(animal.lat, animal.lng)
                 geofenceRadioTemp = gf?.radio_metros?.toFloat() ?: 100f
             }
+            // Cargar historial si el heatmap está activo
             if (modoHeatmap) {
                 isLoadingHeatmap = true
-                geofenceRepository.getUbicacionesHistorial(ganado.id).onSuccess { historialCompleto.clear(); historialCompleto.addAll(it) }
+                geofenceRepository.getUbicacionesHistorial(animal.id)
+                    .onSuccess { historialCompleto.clear(); historialCompleto.addAll(it) }
                 isLoadingHeatmap = false
             }
         }
     }
 
+    // Al activar/desactivar heatmap
     LaunchedEffect(modoHeatmap) {
         if (modoHeatmap) {
-            selectedGanado?.let { ganado ->
+            selectedGanado?.let { animal ->
                 isLoadingHeatmap = true
-                geofenceRepository.getUbicacionesHistorial(ganado.id).onSuccess { historialCompleto.clear(); historialCompleto.addAll(it) }
+                geofenceRepository.getUbicacionesHistorial(animal.id)
+                    .onSuccess { historialCompleto.clear(); historialCompleto.addAll(it) }
                 isLoadingHeatmap = false
             }
-        } else { historialCompleto.clear() }
+        } else {
+            historialCompleto.clear()
+        }
     }
 
+    //Obtener ubicación del usuario
     LaunchedEffect(locationPermission.status.isGranted) {
         if (locationPermission.status.isGranted) {
-            LocationServices.getFusedLocationProviderClient(context).lastLocation.addOnSuccessListener { loc ->
-                loc?.let {
-                    userLocation = LatLng(it.latitude, it.longitude)
-                    if (!hasMovedCamera) {
-                        scope.launch {
-                            cameraPositionState.animate(CameraUpdateFactory.newLatLngZoom(userLocation!!, 15f), 1000)
-                            hasMovedCamera = true
+            LocationServices.getFusedLocationProviderClient(context).lastLocation
+                .addOnSuccessListener { loc ->
+                    loc?.let {
+                        userLocation = LatLng(it.latitude, it.longitude)
+                        if (!hasMovedCamera) {
+                            scope.launch {
+                                cameraPositionState.animate(
+                                    CameraUpdateFactory.newLatLngZoom(userLocation!!, 15f), 1000
+                                )
+                                hasMovedCamera = true
+                            }
                         }
                     }
                 }
-            }
         }
     }
 
+    // Composable principal
     Scaffold { paddingValues ->
-        Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
+        Box(modifier = Modifier
+            .fillMaxSize()
+            .padding(paddingValues)) {
+            // Google Maps
             GoogleMap(
                 modifier = Modifier.fillMaxSize(),
                 cameraPositionState = cameraPositionState,
                 properties = MapProperties(
-                    mapStyleOptions = MapStyleOptions.loadRawResourceStyle(context, if (isDarkTheme) R.raw.dark_map_style else R.raw.light_map_style),
+                    mapStyleOptions = MapStyleOptions.loadRawResourceStyle(
+                        context,
+                        if (isDarkTheme) R.raw.dark_map_style else R.raw.light_map_style
+                    ),
                     isMyLocationEnabled = locationPermission.status.isGranted
                 ),
-                uiSettings = MapUiSettings(zoomControlsEnabled = false, myLocationButtonEnabled = false),
+                uiSettings = MapUiSettings(
+                    zoomControlsEnabled = false,
+                    myLocationButtonEnabled = false
+                ),
                 onMapClick = { latLng ->
                     if (showGeofenceSheet) geofenceCenterTemp = latLng
                     else panelSize = PanelSize.COLLAPSED
                 }
             ) {
-                userGanadoLocation.forEach { ganado ->
-                    val icon = rememberPetMarkerIcon(context = context, photoUrl = ganado.foto_url, borderColor = "#FF8CE2".toColorInt(), anchorColor = "#FF8CE2".toColorInt())
+                // Marcadores de cada animal con foto circular
+                ganadoEnMapa.forEach { animal ->
+                    val icon = rememberPetMarkerIcon(
+                        context     = context,
+                        photoUrl    = animal.foto_url,
+                        borderColor = "#4CAF50".toColorInt(), // verde ganadero
+                        anchorColor = "#4CAF50".toColorInt()
+                    )
                     icon?.let {
                         Marker(
-                            state = MarkerState(LatLng(ganado.lat, ganado.lng)),
-                            title = ganado.nombre, snippet = "Tipo: ${ganado.tipo}", icon = it,
-                            anchor = Offset(0.5f, 1f),
-                            onClick = { selectedGanado = ganado; panelSize = PanelSize.MEDIUM; false }
+                            state   = MarkerState(LatLng(animal.lat, animal.lng)),
+                            title   = animal.nombre,
+                            snippet = "Tipo: ${animal.tipo}",
+                            icon    = it,
+                            anchor  = Offset(0.5f, 1f),
+                            onClick = {
+                                selectedGanado = animal
+                                panelSize = PanelSize.MEDIUM
+                                false
+                            }
                         )
                     }
                 }
 
+                // Círculo y marcador central del geofence activo
                 geofenceActivo?.let { gf ->
                     val center = LatLng(gf.lat, gf.lng)
-                    Circle(center = center, radius = gf.radio_metros, fillColor = Color(0x2200C853), strokeColor = Color(0xFF00C853), strokeWidth = 3f)
-                    Marker(state = MarkerState(center), title = "Centro zona segura", snippet = "Radio: ${gf.radio_metros.toInt()} m")
+                    Circle(
+                        center      = center,
+                        radius      = gf.radio_metros,
+                        fillColor   = Color(0x2200C853),
+                        strokeColor = Color(0xFF00C853),
+                        strokeWidth = 3f
+                    )
+                    Marker(
+                        state   = MarkerState(center),
+                        title   = "Centro zona segura",
+                        snippet = "Radio: ${gf.radio_metros.toInt()} m"
+                    )
                 }
 
+                // Preview del geofence en edición
                 if (showGeofenceSheet) {
                     geofenceCenterTemp?.let { c ->
-                        Circle(center = c, radius = geofenceRadioTemp.toDouble(), fillColor = Color(0x220091EA), strokeColor = Color(0xFF0091EA), strokeWidth = 3f)
+                        Circle(
+                            center      = c,
+                            radius      = geofenceRadioTemp.toDouble(),
+                            fillColor   = Color(0x220091EA),
+                            strokeColor = Color(0xFF0091EA),
+                            strokeWidth = 3f
+                        )
                     }
                 }
 
+                // Heatmap de densidad
                 if (modoHeatmap && heatmapPoints.size >= 2) {
-                    val provider = remember(heatmapPoints) { HeatmapTileProvider.Builder().data(heatmapPoints).radius(40).build() }
+                    val provider = remember(heatmapPoints) {
+                        HeatmapTileProvider.Builder().data(heatmapPoints).radius(40).build()
+                    }
                     TileOverlay(tileProvider = provider)
                 }
 
+                // Polyline con flechas de dirección
                 if (modoHeatmap && mostrarLineas && heatmapPoints.size >= 2) {
-                    Polyline(points = heatmapPoints, color = Color(0xEEFF6B35), width = 6f, geodesic = true)
-
+                    Polyline(
+                        points  = heatmapPoints,
+                        color   = Color(0xEEFF6B35),
+                        width   = 6f,
+                        geodesic = true
+                    )
                     val paso = maxOf(1, heatmapPoints.size / 12)
                     heatmapPoints.windowed(2).forEachIndexed { index, (desde, hacia) ->
                         if (index % paso == 0) {
                             val angulo = anguloDesdePuntos(desde, hacia)
-                            val midPoint = LatLng((desde.latitude + hacia.latitude) / 2, (desde.longitude + hacia.longitude) / 2)
-                            val flechaBmp = crearFlechaBitmap(angulo, android.graphics.Color.parseColor("#FF6B35"), 52)
-                            Marker(state = MarkerState(midPoint), icon = BitmapDescriptorFactory.fromBitmap(flechaBmp), anchor = Offset(0.5f, 0.5f), zIndex = 1f)
+                            val mid = LatLng(
+                                (desde.latitude  + hacia.latitude)  / 2,
+                                (desde.longitude + hacia.longitude) / 2
+                            )
+                            val bmp = crearFlechaBitmap(
+                                angulo, android.graphics.Color.parseColor("#FF6B35"), 52
+                            )
+                            Marker(
+                                state  = MarkerState(mid),
+                                icon   = BitmapDescriptorFactory.fromBitmap(bmp),
+                                anchor = Offset(0.5f, 0.5f),
+                                zIndex = 1f
+                            )
                         }
                     }
-                    heatmapPoints.lastOrNull()?.let { Marker(state = MarkerState(it), title = "Inicio del recorrido") }
-                    heatmapPoints.firstOrNull()?.let { Marker(state = MarkerState(it), title = "Posición más reciente") }
+                    heatmapPoints.lastOrNull()?.let {
+                        Marker(state = MarkerState(it), title = "Inicio del recorrido")
+                    }
+                    heatmapPoints.firstOrNull()?.let {
+                        Marker(state = MarkerState(it), title = "Posición más reciente")
+                    }
                 }
-            }
+            } // fin GoogleMap
 
-            // Indicador heatmap
+            // Indicador heatmap (esquina superior izquierda)
             if (modoHeatmap) {
                 Surface(
-                    modifier = Modifier.align(Alignment.TopStart).padding(12.dp),
-                    color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.95f),
-                    shape = RoundedCornerShape(12.dp), shadowElevation = 4.dp
+                    modifier       = Modifier
+                        .align(Alignment.TopStart)
+                        .padding(12.dp),
+                    color          = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.95f),
+                    shape          = RoundedCornerShape(12.dp),
+                    shadowElevation = 4.dp
                 ) {
                     Column(Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
-                        Text("${heatmapPoints.size} puntos", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
-                        Text(intervalo.label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f))
-                        if (mostrarLineas) Text("↗ Recorrido activo", style = MaterialTheme.typography.labelSmall, color = Color(0xFFFF6B35))
+                        Text(
+                            "${heatmapPoints.size} puntos",
+                            style      = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            intervalo.label,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                        )
+                        if (mostrarLineas) Text(
+                            "↗ Recorrido activo",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Color(0xFFFF6B35)
+                        )
                     }
                 }
             }
 
-            if (isLoadingHeatmap) LinearProgressIndicator(modifier = Modifier.fillMaxWidth().align(Alignment.TopCenter))
+            if (isLoadingHeatmap)
+                LinearProgressIndicator(modifier = Modifier
+                    .fillMaxWidth()
+                    .align(Alignment.TopCenter))
 
+            // FABs (esquina inferior derecha, sobre el panel)
             Column(
-                modifier = Modifier.align(Alignment.BottomEnd).padding(end = 12.dp, bottom = panelHeight + 12.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(end = 12.dp, bottom = panelHeight + 12.dp),
+                verticalArrangement    = Arrangement.spacedBy(8.dp),
+                horizontalAlignment    = Alignment.CenterHorizontally
             ) {
+                // FAB zona segura (solo si hay animal seleccionado)
                 selectedGanado?.let {
                     SmallFloatingActionButton(
-                        onClick = { geofenceCenterTemp = LatLng(it.lat, it.lng); showGeofenceSheet = true },
-                        containerColor = if (geofenceActivo != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+                        onClick = {
+                            geofenceCenterTemp = LatLng(it.lat, it.lng)
+                            showGeofenceSheet = true
+                        },
+                        containerColor = if (geofenceActivo != null)
+                            MaterialTheme.colorScheme.primary
+                        else
+                            MaterialTheme.colorScheme.surfaceVariant,
                         shape = RoundedCornerShape(12.dp)
                     ) {
-                        Icon(painterResource(R.drawable.ic_fence), "Zona segura", Modifier.size(18.dp),
-                            tint = if (geofenceActivo != null) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant)
+                        Icon(
+                            painterResource(R.drawable.ic_fence),
+                            "Zona segura",
+                            Modifier.size(18.dp),
+                            tint = if (geofenceActivo != null)
+                                MaterialTheme.colorScheme.onPrimary
+                            else
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                 }
 
+                // FAB heatmap
                 SmallFloatingActionButton(
-                    onClick = { if (selectedGanado == null) errorMessage = "Selecciona una mascota primero" else showHeatmapSheet = true },
-                    containerColor = if (modoHeatmap) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+                    onClick = {
+                        if (selectedGanado == null)
+                            errorMessage = "Selecciona un animal primero"
+                        else
+                            showHeatmapSheet = true
+                    },
+                    containerColor = if (modoHeatmap)
+                        MaterialTheme.colorScheme.primary
+                    else
+                        MaterialTheme.colorScheme.surfaceVariant,
                     shape = RoundedCornerShape(12.dp)
                 ) {
-                    Icon(painterResource(R.drawable.ic_heatmap), "Mapa de calor", Modifier.size(18.dp),
-                        tint = if (modoHeatmap) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant)
+                    Icon(
+                        painterResource(R.drawable.ic_heatmap),
+                        "Mapa de calor",
+                        Modifier.size(18.dp),
+                        tint = if (modoHeatmap)
+                            MaterialTheme.colorScheme.onPrimary
+                        else
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
 
-                HorizontalDivider(modifier = Modifier.width(36.dp), thickness = 1.dp, color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
+                HorizontalDivider(
+                    modifier  = Modifier.width(36.dp),
+                    thickness = 1.dp,
+                    color     = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)
+                )
 
+                // FAB mi ubicación
                 FloatingActionButton(
-                    onClick = { scope.launch { userLocation?.let { cameraPositionState.animate(CameraUpdateFactory.newLatLngZoom(it, 15f), 800) } ?: run { errorMessage = "Ubicación no disponible aún" } } },
+                    onClick = {
+                        scope.launch {
+                            userLocation?.let {
+                                cameraPositionState.animate(
+                                    CameraUpdateFactory.newLatLngZoom(it, 15f), 800
+                                )
+                            } ?: run { errorMessage = "Ubicación no disponible aún" }
+                        }
+                    },
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                    shape = RoundedCornerShape(16.dp), modifier = Modifier.size(48.dp)
+                    contentColor   = MaterialTheme.colorScheme.onPrimaryContainer,
+                    shape          = RoundedCornerShape(16.dp),
+                    modifier       = Modifier.size(48.dp)
                 ) {
                     Icon(painterResource(R.drawable.ic_location), "Mi ubicación", Modifier.size(22.dp))
                 }
             }
 
-            // PANEL INFERIOR ARRASTRABLE
+            //Panel inferior arrastrable
             Box(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
@@ -413,11 +597,13 @@ fun MapScreen() {
                                     PanelSize.MEDIUM -> PanelSize.EXPANDED
                                     else -> PanelSize.EXPANDED
                                 }
+
                                 dragAmount > 20 -> when (panelSize) {
                                     PanelSize.EXPANDED -> PanelSize.MEDIUM
                                     PanelSize.MEDIUM -> PanelSize.COLLAPSED
                                     else -> PanelSize.COLLAPSED
                                 }
+
                                 else -> panelSize
                             }
                         }
@@ -425,25 +611,46 @@ fun MapScreen() {
             ) {
                 Column(Modifier.fillMaxSize()) {
                     // Handle visual
-                    Box(Modifier.fillMaxWidth().padding(top = 10.dp), contentAlignment = Alignment.Center) {
-                        Box(Modifier.width(40.dp).height(4.dp).clip(RoundedCornerShape(2.dp)).background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f)))
+                    Box(
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(top = 10.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Box(
+                            Modifier
+                                .width(40.dp)
+                                .height(4.dp)
+                                .clip(RoundedCornerShape(2.dp))
+                                .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f))
+                        )
                     }
 
-                    // Header
+                    // Contador de animales + dots de panel
                     Row(
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 6.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                        verticalAlignment     = Alignment.CenterVertically
                     ) {
                         Text(
-                            if (userGanadoLocation.isEmpty()) "Sin mascotas" else "${userGanadoLocation.size} mascota(s)",
-                            style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold
+                            if (ganadoEnMapa.isEmpty()) "Sin animales" else "${ganadoEnMapa.size} animal(es)",
+                            style      = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold
                         )
                         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                             listOf(PanelSize.COLLAPSED, PanelSize.MEDIUM, PanelSize.EXPANDED).forEach { size ->
                                 Box(
-                                    Modifier.size(if (panelSize == size) 10.dp else 7.dp).clip(CircleShape)
-                                        .background(if (panelSize == size) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f))
+                                    Modifier
+                                        .size(if (panelSize == size) 10.dp else 7.dp)
+                                        .clip(CircleShape)
+                                        .background(
+                                            if (panelSize == size)
+                                                MaterialTheme.colorScheme.primary
+                                            else
+                                                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f)
+                                        )
                                         .clickable { panelSize = size }
                                 )
                             }
@@ -452,10 +659,22 @@ fun MapScreen() {
 
                     if (panelSize != PanelSize.COLLAPSED) {
                         if (isLoading) {
-                            LinearWavyProgressIndicator(Modifier.fillMaxWidth().padding(horizontal = 16.dp))
-                        } else if (userGanadoLocation.isEmpty()) {
-                            Box(Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
-                                Text("Sin mascotas con ubicación activa", color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f))
+                            LinearWavyProgressIndicator(
+                                Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp)
+                            )
+                        } else if (ganadoEnMapa.isEmpty()) {
+                            Box(
+                                Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    "Sin animales con ubicación activa",
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                                )
                             }
                         } else {
                             LazyColumn(
@@ -463,12 +682,15 @@ fun MapScreen() {
                                 verticalArrangement = Arrangement.spacedBy(8.dp),
                                 modifier = Modifier.fillMaxSize()
                             ) {
-                                items(userGanadoLocation) { ganado ->
-                                    ganadoMapItem(
-                                        ganado = ganado,
-                                        isSelected = selectedGanado?.id == ganado.id,
-                                        hasGeofence = geofenceActivo?.ganado_id == ganado.id,
-                                        onClick = { selectedGanado = ganado; panelSize = PanelSize.MEDIUM }
+                                items(ganadoEnMapa) { animal ->
+                                    GanadoMapItem(
+                                        animal     = animal,
+                                        isSelected = selectedGanado?.id == animal.id,
+                                        hasGeofence = geofenceActivo?.ganado_id == animal.id,
+                                        onClick    = {
+                                            selectedGanado = animal
+                                            panelSize = PanelSize.MEDIUM
+                                        }
                                     )
                                 }
                             }
@@ -477,33 +699,47 @@ fun MapScreen() {
                 }
             }
 
-            // Snackbar
+            // Snackbar de errores
             errorMessage?.let { msg ->
                 Snackbar(
-                    modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = panelHeight + 8.dp, start = 16.dp, end = 80.dp),
-                    action = { TextButton(onClick = { errorMessage = null }) { Text("OK") } }
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(bottom = panelHeight + 8.dp, start = 16.dp, end = 80.dp),
+                    action = {
+                        TextButton(onClick = { errorMessage = null }) { Text("OK") }
+                    }
                 ) { Text(msg) }
             }
-        }
-    }
+        } // fin Box raíz
+    } // fin Scaffold
 
+    // Bottom sheet: zona segura
     if (showGeofenceSheet) {
         GeofenceBottomSheet(
-            ganadoName = selectedGanado?.nombre ?: "", centerTemp = geofenceCenterTemp,
-            radioTemp = geofenceRadioTemp, geofenceExistente = geofenceActivo,
-            onRadioChange = { geofenceRadioTemp = it },
+            ganadoName      = selectedGanado?.nombre ?: "",
+            centerTemp      = geofenceCenterTemp,
+            radioTemp       = geofenceRadioTemp,
+            geofenceExistente = geofenceActivo,
+            onRadioChange   = { geofenceRadioTemp = it },
             onSave = {
                 scope.launch {
                     val center = geofenceCenterTemp ?: return@launch
-                    geofenceRepository.saveGeofence(NewGeofence(ganado_id = selectedGanado!!.id, user_id = userId, lat = center.latitude, lng = center.longitude, radio_metros = geofenceRadioTemp.toDouble()))
-                        .onSuccess { geofenceActivo = it; showGeofenceSheet = false }
+                    geofenceRepository.saveGeofence(
+                        NewGeofence(
+                            ganado_id    = selectedGanado!!.id,
+                            user_id      = userId,
+                            lat          = center.latitude,
+                            lng          = center.longitude,
+                            radio_metros = geofenceRadioTemp.toDouble()
+                        )
+                    ).onSuccess { geofenceActivo = it; showGeofenceSheet = false }
                         .onFailure { errorMessage = "Error al guardar: ${it.message}" }
                 }
             },
             onDelete = {
                 scope.launch {
-                    selectedGanado?.let { ganado ->
-                        geofenceRepository.deleteGeofence(ganado.id)
+                    selectedGanado?.let { animal ->
+                        geofenceRepository.deleteGeofence(animal.id)
                             .onSuccess { geofenceActivo = null; showGeofenceSheet = false }
                             .onFailure { errorMessage = "Error al eliminar: ${it.message}" }
                     }
@@ -513,67 +749,137 @@ fun MapScreen() {
         )
     }
 
+    // Bottom sheet: heatmap
     if (showHeatmapSheet) {
         HeatmapBottomSheet(
-            ganadoName = selectedGanado?.nombre ?: "", modoHeatmap = modoHeatmap, mostrarLineas = mostrarLineas,
-            intervalo = intervalo, totalPuntos = heatmapPoints.size, totalHistorial = historialCompleto.size,
-            isLoading = isLoadingHeatmap, onToggleHeatmap = { modoHeatmap = it }, onToggleLineas = { mostrarLineas = it },
+            ganadoName      = selectedGanado?.nombre ?: "",
+            modoHeatmap     = modoHeatmap,
+            mostrarLineas   = mostrarLineas,
+            intervalo       = intervalo,
+            totalPuntos     = heatmapPoints.size,
+            totalHistorial  = historialCompleto.size,
+            isLoading       = isLoadingHeatmap,
+            onToggleHeatmap = { modoHeatmap = it },
+            onToggleLineas  = { mostrarLineas = it },
             onIntervaloChange = { intervalo = it },
             onRecargar = {
                 scope.launch {
-                    selectedGanado?.let { ganado ->
+                    selectedGanado?.let { animal ->
                         isLoadingHeatmap = true
-                        geofenceRepository.getUbicacionesHistorial(ganado.id)
+                        geofenceRepository.getUbicacionesHistorial(animal.id)
                             .onSuccess { historialCompleto.clear(); historialCompleto.addAll(it) }
                             .onFailure { errorMessage = "Error al cargar: ${it.message}" }
                         isLoadingHeatmap = false
                     }
                 }
+                println(historialCompleto.size)
             },
             onDismiss = { showHeatmapSheet = false }
         )
     }
 }
 
+// Bottom sheet: configurar heatmap
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HeatmapBottomSheet(
-    ganadoName: String, modoHeatmap: Boolean, mostrarLineas: Boolean, intervalo: IntervaloHeatmap,
-    totalPuntos: Int, totalHistorial: Int, isLoading: Boolean,
-    onToggleHeatmap: (Boolean) -> Unit, onToggleLineas: (Boolean) -> Unit,
-    onIntervaloChange: (IntervaloHeatmap) -> Unit, onRecargar: () -> Unit, onDismiss: () -> Unit
+    ganadoName     : String,
+    modoHeatmap    : Boolean,
+    mostrarLineas  : Boolean,
+    intervalo      : IntervaloHeatmap,
+    totalPuntos    : Int,
+    totalHistorial : Int,
+    isLoading      : Boolean,
+    onToggleHeatmap  : (Boolean) -> Unit,
+    onToggleLineas   : (Boolean) -> Unit,
+    onIntervaloChange: (IntervaloHeatmap) -> Unit,
+    onRecargar       : () -> Unit,
+    onDismiss        : () -> Unit
 ) {
-    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
-        Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp).padding(bottom = 32.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            Text("Mapa de calor · $ganadoName", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp)
+                .padding(bottom = 32.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Text(
+                "Mapa de calor · $ganadoName",
+                style      = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold
+            )
 
             Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)) {
-                Row(modifier = Modifier.fillMaxWidth().padding(12.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                    Column { Text("Total historial", style = MaterialTheme.typography.labelMedium); Text("$totalHistorial registros", fontWeight = FontWeight.Bold) }
-                    Column(horizontalAlignment = Alignment.End) { Text("Mostrando", style = MaterialTheme.typography.labelMedium); Text("$totalPuntos puntos", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary) }
+                Row(
+                    modifier              = Modifier
+                        .fillMaxWidth()
+                        .padding(12.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment     = Alignment.CenterVertically
+                ) {
+                    Column {
+                        Text("Total historial", style = MaterialTheme.typography.labelMedium)
+                        Text("$totalHistorial registros", fontWeight = FontWeight.Bold)
+                    }
+                    Column(horizontalAlignment = Alignment.End) {
+                        Text("Mostrando", style = MaterialTheme.typography.labelMedium)
+                        Text(
+                            "$totalPuntos puntos",
+                            fontWeight = FontWeight.Bold,
+                            color      = MaterialTheme.colorScheme.primary
+                        )
+                    }
                 }
             }
 
             if (totalHistorial == 0 && !isLoading && modoHeatmap) {
                 Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)) {
-                    Text("Sin historial.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(12.dp))
+                    Text(
+                        "Sin historial de ubicaciones.",
+                        style    = MaterialTheme.typography.bodySmall,
+                        color    = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.padding(12.dp)
+                    )
                 }
             }
             if (totalHistorial > 0 && totalPuntos < 2 && modoHeatmap) {
                 Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer)) {
-                    Text("Solo $totalPuntos punto(s) en \"${intervalo.label}\". Prueba con un intervalo más amplio.", style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(12.dp))
+                    Text(
+                        "Solo $totalPuntos punto(s) en \"${intervalo.label}\". Prueba un intervalo más amplio.",
+                        style    = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.padding(12.dp)
+                    )
                 }
             }
 
             HorizontalDivider()
 
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Column { Text("Mapa de calor", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium); Text("Muestra densidad de movimiento", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)) }
+            Row(
+                modifier              = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment     = Alignment.CenterVertically
+            ) {
+                Column {
+                    Text("Mapa de calor", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
+                    Text("Muestra densidad de movimiento", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
+                }
                 Switch(checked = modoHeatmap, onCheckedChange = onToggleHeatmap)
             }
 
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Column { Text("Recorrido con flechas", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium); Text("Línea direccional entre puntos", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)) }
+            Row(
+                modifier              = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment     = Alignment.CenterVertically
+            ) {
+                Column {
+                    Text("Recorrido con flechas", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
+                    Text("Línea direccional entre puntos", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
+                }
                 Switch(checked = mostrarLineas, onCheckedChange = onToggleLineas, enabled = modoHeatmap)
             }
 
@@ -583,23 +889,48 @@ fun HeatmapBottomSheet(
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 IntervaloHeatmap.entries.forEach { opcion ->
                     Row(
-                        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp))
-                            .background(if (intervalo == opcion) MaterialTheme.colorScheme.secondaryContainer else Color.Transparent)
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(
+                                if (intervalo == opcion)
+                                    MaterialTheme.colorScheme.secondaryContainer
+                                else
+                                    Color.Transparent
+                            )
                             .clickable(enabled = modoHeatmap) { onIntervaloChange(opcion) }
                             .padding(horizontal = 12.dp, vertical = 10.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment     = Alignment.CenterVertically
                     ) {
-                        Text(opcion.label, style = MaterialTheme.typography.bodyMedium,
-                            color = when { !modoHeatmap -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f); intervalo == opcion -> MaterialTheme.colorScheme.primary; else -> MaterialTheme.colorScheme.onSurface })
-                        if (intervalo == opcion) Icon(painterResource(R.drawable.ic_location), null, Modifier.size(14.dp), tint = MaterialTheme.colorScheme.primary)
+                        Text(
+                            opcion.label,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = when {
+                                !modoHeatmap      -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
+                                intervalo == opcion -> MaterialTheme.colorScheme.primary
+                                else              -> MaterialTheme.colorScheme.onSurface
+                            }
+                        )
+                        if (intervalo == opcion) Icon(
+                            painterResource(R.drawable.ic_location), null,
+                            Modifier.size(14.dp), tint = MaterialTheme.colorScheme.primary
+                        )
                     }
                 }
             }
 
             HorizontalDivider()
             Row(Modifier.fillMaxWidth(), Arrangement.spacedBy(12.dp)) {
-                OutlinedButton(onClick = onRecargar, modifier = Modifier.weight(1f), enabled = !isLoading) {
-                    if (isLoading) { CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp); Spacer(Modifier.width(8.dp)) }
+                OutlinedButton(
+                    onClick  = onRecargar,
+                    modifier = Modifier.weight(1f),
+                    enabled  = !isLoading
+                ) {
+                    if (isLoading) {
+                        CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
+                        Spacer(Modifier.width(8.dp))
+                    }
                     Text(if (isLoading) "Cargando…" else "Recargar")
                 }
                 Button(onClick = onDismiss, modifier = Modifier.weight(1f)) { Text("Listo") }
@@ -609,41 +940,101 @@ fun HeatmapBottomSheet(
     }
 }
 
+//Bottom sheet: configurar geofence
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GeofenceBottomSheet(
-    ganadoName: String, centerTemp: LatLng?, radioTemp: Float, geofenceExistente: Geofence?,
-    onRadioChange: (Float) -> Unit, onSave: () -> Unit, onDelete: () -> Unit, onDismiss: () -> Unit
+    ganadoName       : String,
+    centerTemp       : LatLng?,
+    radioTemp        : Float,
+    geofenceExistente: Geofence?,
+    onRadioChange    : (Float) -> Unit,
+    onSave           : () -> Unit,
+    onDelete         : () -> Unit,
+    onDismiss        : () -> Unit
 ) {
-    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
-        Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp).padding(bottom = 32.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            Text("Zona segura · $ganadoName", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp)
+                .padding(bottom = 32.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Text(
+                "Zona segura · $ganadoName",
+                style      = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold
+            )
+
             Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)) {
-                Row(modifier = Modifier.padding(12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    modifier              = Modifier.padding(12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment     = Alignment.CenterVertically
+                ) {
                     Icon(painterResource(R.drawable.ic_map), null, Modifier.size(18.dp), tint = Color.Unspecified)
-                    Text("Si la mascota sale del radio se enviará una notificación.", style = MaterialTheme.typography.bodySmall)
+                    Text(
+                        "Si el animal sale del radio se enviará una notificación.",
+                        style = MaterialTheme.typography.bodySmall
+                    )
                 }
             }
-            centerTemp?.let { Text("Centro: ${"%.5f".format(it.latitude)}, ${"%.5f".format(it.longitude)}", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)) }
+
+            centerTemp?.let {
+                Text(
+                    "Centro: ${"%.5f".format(it.latitude)}, ${"%.5f".format(it.longitude)}",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                )
+            }
+
             Column {
                 Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween) {
                     Text("Radio de la zona", style = MaterialTheme.typography.labelLarge)
-                    Text("${radioTemp.toInt()} m", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                    Text(
+                        "${radioTemp.toInt()} m",
+                        style      = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Bold,
+                        color      = MaterialTheme.colorScheme.primary
+                    )
                 }
-                Slider(value = radioTemp, onValueChange = onRadioChange, valueRange = 20f..200f, steps = 20, modifier = Modifier.fillMaxWidth())
+                Slider(
+                    value        = radioTemp,
+                    onValueChange = onRadioChange,
+                    valueRange   = 20f..500f, // Ganadería puede requerir rangos más amplios
+                    steps        = 24,
+                    modifier     = Modifier.fillMaxWidth()
+                )
                 Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween) {
-                    Text("20 m", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
-                    Text("200 m", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+                    Text("20 m",  style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+                    Text("500 m", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
                 }
             }
+
             HorizontalDivider()
+
             Row(Modifier.fillMaxWidth(), Arrangement.spacedBy(12.dp)) {
                 if (geofenceExistente != null) {
-                    OutlinedButton(onClick = onDelete, modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.error)) { Text("Eliminar zona") }
+                    OutlinedButton(
+                        onClick  = onDelete,
+                        modifier = Modifier.weight(1f),
+                        colors   = ButtonDefaults.outlinedButtonColors(
+                            contentColor = MaterialTheme.colorScheme.error
+                        ),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.error)
+                    ) { Text("Eliminar zona") }
                 } else Spacer(Modifier.weight(1f))
-                Button(onClick = onSave, modifier = Modifier.weight(1f), enabled = centerTemp != null) {
+
+                Button(
+                    onClick  = onSave,
+                    modifier = Modifier.weight(1f),
+                    enabled  = centerTemp != null
+                ) {
                     Text(if (geofenceExistente != null) "Actualizar" else "Guardar zona")
                 }
             }
@@ -652,38 +1043,97 @@ fun GeofenceBottomSheet(
     }
 }
 
+// Item del panel inferior
+
 @Composable
-fun ganadoMapItem(ganado: ganadoLocation, isSelected: Boolean, hasGeofence: Boolean = false, onClick: () -> Unit) {
+fun GanadoMapItem(
+    animal     : ganadoLocation,
+    isSelected : Boolean,
+    hasGeofence: Boolean = false,
+    onClick    : () -> Unit
+) {
     Card(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = if (isSelected) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surfaceVariant),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+        shape    = RoundedCornerShape(12.dp),
+        colors   = CardDefaults.cardColors(
+            containerColor = if (isSelected)
+                MaterialTheme.colorScheme.secondaryContainer
+            else
+                MaterialTheme.colorScheme.surfaceVariant
+        ),
         border = if (isSelected) BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else null
     ) {
-        Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            val iconRes = when (ganado.tipo.lowercase()) { "perro" -> R.drawable.ic_dog; "gato" -> R.drawable.ic_cat; else -> R.drawable.ic_pet }
-            Box(Modifier.size(48.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surface), contentAlignment = Alignment.Center) {
-                if (!ganado.foto_url.isNullOrBlank()) {
-                    AsyncImage(model = "${ganado.foto_url}?", contentDescription = ganado.nombre, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+        Row(
+            modifier              = Modifier.padding(12.dp),
+            verticalAlignment     = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            // Foto o icono según especie
+            Box(
+                Modifier
+                    .size(48.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.surface),
+                contentAlignment = Alignment.Center
+            ) {
+                if (!animal.foto_url.isNullOrBlank()) {
+                    AsyncImage(
+                        model            = "${animal.foto_url}?",
+                        contentDescription = animal.nombre,
+                        modifier         = Modifier.fillMaxSize(),
+                        contentScale     = ContentScale.Crop
+                    )
                 } else {
-                    Icon(painterResource(iconRes), ganado.nombre, Modifier.size(28.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Icon(
+                        painterResource(iconoPorTipo(animal.tipo)),
+                        animal.nombre,
+                        Modifier.size(28.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             }
+
             Column(Modifier.weight(1f)) {
-                Text(ganado.nombre, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
-                Text("${"%.4f".format(ganado.lat)}, ${"%.4f".format(ganado.lng)}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f))
+                Text(
+                    animal.nombre,
+                    style      = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    // Muestra tipo y coordenadas
+                    "${animal.tipo} · ${"%.4f".format(animal.lat)}, ${"%.4f".format(animal.lng)}",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                )
             }
-            Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                if (hasGeofence) Surface(color = Color(0x2200C853), shape = RoundedCornerShape(4.dp)) { Text("🛡", style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)) }
-                if (isSelected) Surface(color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f), shape = RoundedCornerShape(4.dp)) { Text("Activa", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)) }
+
+            Column(
+                horizontalAlignment = Alignment.End,
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                if (hasGeofence)
+                    Surface(color = Color(0x2200C853), shape = RoundedCornerShape(4.dp)) {
+                        Text(
+                            "🛡",
+                            style    = MaterialTheme.typography.labelSmall,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        )
+                    }
+                if (isSelected)
+                    Surface(
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+                        shape = RoundedCornerShape(4.dp)
+                    ) {
+                        Text(
+                            "Activo",
+                            style    = MaterialTheme.typography.labelSmall,
+                            color    = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        )
+                    }
             }
         }
     }
-}
-
-@OptIn(ExperimentalPermissionsApi::class)
-@Composable
-fun PermissionHandler() {
-    val locationPermissionState = rememberPermissionState(Manifest.permission.ACCESS_FINE_LOCATION)
-    LaunchedEffect(Unit) { if (!locationPermissionState.status.isGranted) locationPermissionState.launchPermissionRequest() }
 }
