@@ -75,7 +75,7 @@ fun CollaresAdminScreen(navController: NavController) {
     val scope = rememberCoroutineScope()
 
     var showDeviceDialog by remember { mutableStateOf(false) }
-    var selectedPetForLinking by remember { mutableStateOf<Ganado?>(null) }
+    var selectedGanadpForLinking by remember { mutableStateOf<Ganado?>(null) }
 
     // Estados de la UI
     var isScanning by remember { mutableStateOf(false) }
@@ -113,7 +113,7 @@ fun CollaresAdminScreen(navController: NavController) {
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text("Administrar Collares", fontWeight = FontWeight.Bold) },
+                title = { Text("Administrar Aretes", fontWeight = FontWeight.Bold) },
                 actions = {
                     // Botón para refrescar/escanear
                     IconButton(onClick = { isScanning = !isScanning }) {
@@ -149,7 +149,7 @@ fun CollaresAdminScreen(navController: NavController) {
                         if (isScanning) {
                             CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
                             Spacer(Modifier.width(12.dp))
-                            Text("Buscando collares cercanos...")
+                            Text("Buscando aretes cercanos...")
                         } else {
                             Icon(
                                 painter = painterResource(id = R.drawable.ic_bluetooth), // Solución aquí
@@ -166,7 +166,7 @@ fun CollaresAdminScreen(navController: NavController) {
 
             // --- SECCIÓN 2: LISTA DE GANADO ---
             item {
-                Text("Tus Mascotas", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text("Tu Ganado", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
             }
 
             if (isLoadingGanado) {
@@ -179,7 +179,7 @@ fun CollaresAdminScreen(navController: NavController) {
                     isScanning = isScanning,
                     onLinkClick = {
                         // ACTUALIZADO: Guardamos la mascota y abrimos el diálogo
-                        selectedPetForLinking = ganado
+                        selectedGanadpForLinking = ganado
                         showDeviceDialog = true
                         isScanning = true
                     },
@@ -192,25 +192,25 @@ fun CollaresAdminScreen(navController: NavController) {
         if (showDeviceDialog) {
             AlertDialog(
                 onDismissRequest = { showDeviceDialog = false },
-                title = { Text("Selecciona el Collar para ${selectedPetForLinking?.nombre}") },
+                title = { Text("Selecciona el arete para ${selectedGanadpForLinking?.nombre}") },
                 text = {
                     Column(modifier = Modifier.fillMaxWidth()) {
                         if (dispositivos.isEmpty()) {
-                            Text("Buscando collares cercanos...", style = MaterialTheme.typography.bodySmall)
+                            Text("Buscando aretes cercanos...", style = MaterialTheme.typography.bodySmall)
                             LinearProgressIndicator(modifier = Modifier.fillMaxWidth().padding(top = 8.dp))
                         } else {
                             LazyColumn(modifier = Modifier.heightIn(max = 300.dp)) {
                                 items(dispositivos) { dispositivo ->
                                     Text(
-                                        text = dispositivo.name ?: "Collar Desconocido",
+                                        text = dispositivo.name ?: "Arete Desconocido",
                                         modifier = Modifier
                                             .fillMaxWidth()
                                             .clickable {
                                                 // PRÓXIMO PASO: Vincular selectedPetForLinking con este dispositivo
-                                                val petId = selectedPetForLinking?.id ?: ""
+                                                val ganadoId = selectedGanadpForLinking?.id ?: ""
 
                                                 // Llamamos a la conexión
-                                                bleManager.conectarYEnviarId(dispositivo.address, petId) { success ->
+                                                bleManager.conectarYEnviarId(dispositivo.address, ganadoId) { success ->
                                                     scope.launch {
                                                         if (success) {
                                                             // Aquí podrías mostrar un aviso de "Vinculado con éxito"
@@ -269,7 +269,7 @@ fun CollarPetCard(ganado: Ganado, isScanning: Boolean, onLinkClick: () -> Unit, 
             Column(modifier = Modifier.weight(1f).padding(horizontal = 12.dp)) {
                 Text(text = ganado.nombre.toString(), style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
                 Text(
-                    text = if (false) "Conectado al collar" else "Sin collar vinculado",
+                    text = if (false) "Conectado al collar" else "Sin Arete vinculado",
                     style = MaterialTheme.typography.labelMedium,
                     color = if (false) Color(0xFF4CAF50) else MaterialTheme.colorScheme.outline
                 )
@@ -285,7 +285,7 @@ fun CollarPetCard(ganado: Ganado, isScanning: Boolean, onLinkClick: () -> Unit, 
                 }
                 Spacer(modifier = Modifier.height(6.dp))
                 OutlinedButton(
-                    onClick = onNfcClick,  // nuevo parámetro a añadir
+                    onClick = onNfcClick,
                     shape = RoundedCornerShape(8.dp),
                     contentPadding = PaddingValues(horizontal = 8.dp)
                 ) {

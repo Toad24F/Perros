@@ -48,6 +48,7 @@ import com.example.huellasseguras.Workers.GeofenceWorker
 import com.example.huellasseguras.ui.theme.PerrosTheme
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
+import com.google.accompanist.permissions.rememberMultiplePermissionsState
 import com.google.accompanist.permissions.rememberPermissionState
 
 
@@ -119,7 +120,7 @@ class MainActivity : ComponentActivity() {
 public fun AppNavigation() {
 
     val context = LocalContext.current
-    PermissionHandler()
+    MultiplePermissionHandler()
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
         val notifPermission = rememberPermissionState(Manifest.permission.POST_NOTIFICATIONS)
         LaunchedEffect(Unit) {
@@ -244,13 +245,21 @@ fun LoginPreview() {
 }
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
-fun PermissionHandler() {
-    val locationPermissionState = rememberPermissionState(
-        Manifest.permission.ACCESS_FINE_LOCATION
-    )
+fun MultiplePermissionHandler() {
+    val permissionsToRequest = mutableListOf(Manifest.permission.ACCESS_FINE_LOCATION)
+
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        permissionsToRequest.add(Manifest.permission.BLUETOOTH_CONNECT)
+        permissionsToRequest.add(Manifest.permission.BLUETOOTH_SCAN)
+    }
+
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        permissionsToRequest.add(Manifest.permission.POST_NOTIFICATIONS)
+    }
+
+    val multiplePermissionsState = rememberMultiplePermissionsState(permissionsToRequest)
+
     LaunchedEffect(Unit) {
-        if (!locationPermissionState.status.isGranted) {
-            locationPermissionState.launchPermissionRequest()
-        }
+        multiplePermissionsState.launchMultiplePermissionRequest()
     }
 }

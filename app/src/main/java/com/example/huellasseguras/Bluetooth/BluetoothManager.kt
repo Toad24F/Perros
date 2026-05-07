@@ -59,7 +59,7 @@ class BluetoothManager(private val context: Context) {
         bleScanner?.stopScan(scanCallback)
     }
     @SuppressLint("MissingPermission")
-    fun conectarYEnviarId(deviceAddress: String, petId: String, onResult: (Boolean) -> Unit) {
+    fun conectarYEnviarId(deviceAddress: String, ganadoId: String, onResult: (Boolean) -> Unit) {
         val device = bluetoothAdapter?.getRemoteDevice(deviceAddress)
 
         device?.connectGatt(context, false, object : BluetoothGattCallback() {
@@ -80,7 +80,7 @@ class BluetoothManager(private val context: Context) {
 
                     if (characteristic != null) {
                         // Escribimos el petId en la característica
-                        characteristic.value = petId.toByteArray()
+                        characteristic.value = ganadoId.toByteArray()
                         gatt.writeCharacteristic(characteristic)
                     }
                 }
