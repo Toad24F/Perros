@@ -4,6 +4,7 @@ import android.content.Context
 import android.net.Uri
 import com.example.huellasseguras.Supabase.Supabase
 import com.example.huellasseguras.model.Ganado
+import com.example.huellasseguras.model.GanadoConBateriaRaw
 import com.example.huellasseguras.model.NewGanado
 import com.example.huellasseguras.model.OwnerPublicProfile
 import com.example.huellasseguras.model.ganadoLocation
@@ -56,6 +57,35 @@ class GanadoRepository {
                 }
                 .decodeList<Ganado>()
             Result.success(lista)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            Result.failure(e)
+        }
+    }
+    // En Ganadorepository.kt
+    suspend fun loadGanadoConEstado(userId: String): Result<List<Ganado>> {
+        return try {
+            // Consultamos la tabla ganado y traemos la columna bateria de la relación 'ubicaciones'
+            val response = Supabase.client.from("ganado")
+                .select(columns = Columns.raw("*, ubicaciones(Bateria)")) {
+                    filter { eq("user_id", userId) }
+                }
+                .decodeList<GanadoConBateriaRaw>()
+
+            val listaMapeada = response.map { raw ->
+                Ganado(
+                    id = raw.id,
+                    arete = raw.arete,
+                    nombre = raw.nombre,
+                    tipo = raw.tipo,
+                    raza = raw.raza,
+                    user_id = raw.user_id,
+                    foto_url = raw.foto_url,
+                    // Extraemos la batería del primer registro de la lista (el más reciente)
+                    bateria = raw.ubicaciones.firstOrNull()?.Bateria
+                )
+            }
+            Result.success(listaMapeada)
         } catch (e: Exception) {
             e.printStackTrace()
             Result.failure(e)

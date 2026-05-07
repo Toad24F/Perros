@@ -26,13 +26,11 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.CircularWavyProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -91,7 +89,8 @@ fun CollaresAdminScreen(navController: NavController) {
     val dispositivos = bleManager.dispositivosEncontrados
 
     LaunchedEffect(Unit) {
-        val result = GanadoRepository.loadGanado(userId) // Asumiendo que tienes esta función en el repo
+        // Cambiamos la llamada a la nueva función con estado
+        val result = GanadoRepository.loadGanadoConEstado(userId)
         result.onSuccess {
             ganados.clear()
             ganados.addAll(it)
@@ -147,7 +146,7 @@ fun CollaresAdminScreen(navController: NavController) {
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         if (isScanning) {
-                            CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
+                            CircularWavyProgressIndicator()
                             Spacer(Modifier.width(12.dp))
                             Text("Buscando aretes cercanos...")
                         } else {
@@ -197,7 +196,7 @@ fun CollaresAdminScreen(navController: NavController) {
                     Column(modifier = Modifier.fillMaxWidth()) {
                         if (dispositivos.isEmpty()) {
                             Text("Buscando aretes cercanos...", style = MaterialTheme.typography.bodySmall)
-                            LinearProgressIndicator(modifier = Modifier.fillMaxWidth().padding(top = 8.dp))
+                            LinearWavyProgressIndicator(modifier = Modifier.fillMaxWidth())
                         } else {
                             LazyColumn(modifier = Modifier.heightIn(max = 300.dp)) {
                                 items(dispositivos) { dispositivo ->
@@ -245,6 +244,7 @@ fun CollaresAdminScreen(navController: NavController) {
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun CollarPetCard(ganado: Ganado, isScanning: Boolean, onLinkClick: () -> Unit, onNfcClick: () -> Unit) {
+    val tieneBateria = ganado.bateria != null
     Card(
         modifier = Modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
@@ -268,20 +268,39 @@ fun CollarPetCard(ganado: Ganado, isScanning: Boolean, onLinkClick: () -> Unit, 
 
             Column(modifier = Modifier.weight(1f).padding(horizontal = 12.dp)) {
                 Text(text = ganado.nombre.toString(), style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
+
+                val tieneBateria = ganado.bateria != null
+                val textoEstado = if (tieneBateria) {
+                    "Arete vinculado: ${ganado.bateria}% batería"
+                } else {
+                    "Sin Arete vinculado"
+                }
+
                 Text(
-                    text = if (false) "Conectado al collar" else "Sin Arete vinculado",
+                    text = textoEstado,
                     style = MaterialTheme.typography.labelMedium,
-                    color = if (false) Color(0xFF4CAF50) else MaterialTheme.colorScheme.outline
+                    // Verde si está vinculado, gris si no
+                    color = if (tieneBateria) Color(0xFF4CAF50) else MaterialTheme.colorScheme.outline
                 )
             }
 
             Column(horizontalAlignment = Alignment.End) {
-                Button(
-                    onClick = onLinkClick,
-                    shape = RoundedCornerShape(8.dp),
-                    contentPadding = PaddingValues(horizontal = 12.dp)
-                ) {
-                    Text("BLE")
+                if (!tieneBateria) {
+                    Button(
+                        onClick = onLinkClick,
+                        shape = RoundedCornerShape(8.dp),
+                        contentPadding = PaddingValues(horizontal = 12.dp)
+                    ) {
+                        Text("BLE")
+                    }
+                } else {
+                    Button(
+                        onClick = onLinkClick,
+                        shape = RoundedCornerShape(8.dp),
+                        contentPadding = PaddingValues(horizontal = 12.dp)
+                    ) {
+                        Text("Revincular")
+                    }
                 }
                 Spacer(modifier = Modifier.height(6.dp))
                 OutlinedButton(

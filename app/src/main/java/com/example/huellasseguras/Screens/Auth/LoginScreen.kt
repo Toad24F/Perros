@@ -95,7 +95,7 @@ fun LoginScreen(navController: NavController) {
                     .padding(16.dp)
             ) {
                 Text(
-                    text = "HuellaLiza",
+                    text = "Geonado",
                     color = MaterialTheme.colorScheme.background,
                     style = MaterialTheme.typography.headlineLarge.copy(
                         fontWeight = FontWeight.Bold

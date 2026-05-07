@@ -31,8 +31,8 @@ import com.example.huellasseguras.Screens.ganado.Ganado
 fun HomeScreen(navController: NavController) {
     val tabs = listOf(
         TabItem("Mapa", R.drawable.ic_map),
-        TabItem("Mascotas", R.drawable.ic_pets),
-        TabItem("Collares", R.drawable.ic_leash),
+        TabItem("Ganado", R.drawable.ic_pets),
+        TabItem("Aretes", R.drawable.ic_leash),
         TabItem("Perfil", R.drawable.ic_profile),
     )
     var selectedTab by remember { mutableIntStateOf(1) }

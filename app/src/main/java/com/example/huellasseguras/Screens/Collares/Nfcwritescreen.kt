@@ -27,9 +27,10 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
@@ -56,7 +57,7 @@ import com.example.huellasseguras.model.Ganado
 
 private enum class NfcWriteState { WAITING, SUCCESS, ERROR, NO_NFC }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun NfcWriteScreen(ganado: Ganado, navController: NavController) {
     val context = LocalContext.current
@@ -192,7 +193,7 @@ fun NfcWriteScreen(ganado: Ganado, navController: NavController) {
 
                     Spacer(modifier = Modifier.height(32.dp))
 
-                    LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                    LinearWavyProgressIndicator(modifier = Modifier.fillMaxWidth())
 
                     Spacer(modifier = Modifier.height(32.dp))
 
